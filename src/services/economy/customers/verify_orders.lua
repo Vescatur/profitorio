@@ -235,7 +235,6 @@ for _, order in ipairs(customers.orders) do
         end
     end
 
-    log("[cost] " .. order.amount .. " x " .. order.item .. " costs " .. describe(owed))
 end
 
 assert(shortfalls == 0, "cost: " .. shortfalls
