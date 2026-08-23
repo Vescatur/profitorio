@@ -147,11 +147,34 @@ still resolve. Radar is deliberately kept craftable: `satellite` needs five of t
 The Profitorio tab and its subgroup ordering. Deliberately not distributed into the domains: the
 `order` letters only make sense read side by side.
 
+## Running several instances at once
+
+Factorio admits one process per write-data directory, and the installer build points every launch
+at `%APPDATA%\Factorio`. That one `.lock` file is why the checks were serial: a running
+`probe.ps1` made `prototypes.ps1` fail with `Couldn't create lock file`, which reads exactly like a
+mod error.
+
+`tools/lib/instance.ps1` breaks the tie. Given `-Instance <name>` it writes a `config.ini` whose
+`[path] write-data` is `.factorio/<name>/data`, and hands the launcher a `--config` argument.
+Everything mutable follows the write-data directory — the lock, the mods folder, saves, scenarios,
+`script-output`, the log — so instances neither see nor block each other. The 4.3 GB `read-data`
+stays shared, which is why an instance costs about 3.5 MB rather than a copy of the install.
+
+Two shapes here are deliberate. **No `-Instance` means the shared install and today's behaviour**,
+because that is the human's game and their saves; agents move off it, the player never does. And
+**the instance name is authored, not derived** — a name maps to a directory, so a stray one is
+visible on disk and removable, where an index derived from a worktree or a PID would be neither.
+
+Ports are the part write-data does not cover: `--start-server` binds UDP 34197 unless told
+otherwise, so both launchers ask the OS for a free port instead of defaulting to a fixed one.
+
 ## Outside `src/`
 
 - **`art/icons/`** — editable SVG sources for the custom sprites, kept out of `src/` so only shipped
   assets are symlinked into the mods folder. `src/graphics/icons/` is generated from them.
 - **`tools/`** — dev scripts, grouped by what you are trying to do rather than by what they use.
   Every folder carries a README. See [dev-setup.md](dev-setup.md) for how to run them.
+- **`.factorio/<name>/`** — per-instance Factorio state, one per `-Instance` name. Gitignored,
+  disposable: delete a directory and the next run seeds it again.
 - **`factorio-data/`** — base game prototype data. Read-only reference.
 - **`factorio-docs/markdown/`** — the Factorio API reference. Generated; do not edit by hand.

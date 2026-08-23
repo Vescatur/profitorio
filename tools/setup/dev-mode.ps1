@@ -5,7 +5,12 @@
 # a folder that does not exist, and Factorio then loads without the mod at all,
 # which looks exactly like a clean run.
 
-$src = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) "src"
+param(
+    [string]$Instance = ""
+)
+
+$repo = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
+$src  = Join-Path $repo "src"
 
 if (-not (Test-Path $src)) {
     Write-Error "Mod source not found at: $src"
@@ -15,7 +20,9 @@ if (-not (Test-Path $src)) {
 # Read rather than hardcode: Factorio refuses a mod whose folder name disagrees
 # with the name in its info.json, so a rename here has to follow that file.
 $info = Get-Content (Join-Path $src "info.json") -Raw | ConvertFrom-Json
-$mods = Join-Path $env:APPDATA "Factorio\mods"
+
+. (Join-Path $repo "tools\lib\instance.ps1")
+$mods = (Get-FactorioInstance -Instance $Instance).Mods
 $link = Join-Path $mods "$($info.name)_$($info.version)"
 
 if (Test-Path $link) {

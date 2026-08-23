@@ -4,4 +4,5 @@ __pycache__/
 *.pyc
 tools/check/.verify/
 tools/.secrets/
+.factorio/
 factorio

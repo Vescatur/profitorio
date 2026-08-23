@@ -18,24 +18,30 @@
 #
 #   * a running server holds Factorio's lock file, so tools/check/prototypes.ps1
 #     fails with "Couldn't create lock file" and reads exactly like a mod error.
-#     Always -Action stop when finished.
+#     Always -Action stop when finished. Two servers under different -Instance
+#     names hold different lock files and do not collide.
 
 param(
     [ValidateSet("start", "stop")]
     [string]$Action = "start",
     [string]$Save = "dev.zip",
-    [int]$Port = 27015
+    [int]$Port = 0,
+    [string]$Instance = ""
 )
 
-# The repo's own Factorio. Saves are not beside it: the install ships
-# use-system-read-write-data-directories=true, so they stay in %APPDATA%.
+# The repo's own Factorio. Without -Instance the saves are not beside it: the
+# install ships use-system-read-write-data-directories=true, so they stay in
+# %APPDATA%.
 $repo        = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 $factorioExe = Join-Path $repo "factorio\bin\x64\factorio.exe"
-$savesDir    = Join-Path $env:APPDATA "Factorio\saves"
-$stateDir    = Join-Path $PSScriptRoot ".verify"
-$stateFile   = Join-Path $stateDir "rcon.json"
-$logFile     = Join-Path $stateDir "server-stdout.txt"
 $settings    = Join-Path $PSScriptRoot "probe-settings.json"
+
+. (Join-Path $repo "tools\lib\instance.ps1")
+$target    = Get-FactorioInstance -Instance $Instance
+$savesDir  = $target.Saves
+$stateDir  = $target.State
+$stateFile = Join-Path $stateDir "rcon.json"
+$logFile   = Join-Path $stateDir "server-stdout.txt"
 
 function Stop-Server {
     if (-not (Test-Path $stateFile)) {
@@ -69,20 +75,24 @@ if (Test-Path $stateFile) {
 
 if (-not (Test-Path $stateDir)) { New-Item -ItemType Directory -Path $stateDir | Out-Null }
 
-$copy = Join-Path $savesDir ($Save -replace '\.zip$', '') 
+$copy = Join-Path $savesDir ($Save -replace '\.zip$', '')
 $copy = "$copy.verify.zip"
 Copy-Item $source $copy -Force
 
 # Loopback only. --rcon-port binds every interface, which is more than a local
-# test harness has any business doing.
+# test harness has any business doing. Port 0 means "ask the OS": a fixed default
+# is one more thing two concurrent instances would have to agree not to share,
+# and probe_client.py reads the real number back out of the state file anyway.
+if ($Port -eq 0) { $Port = Get-FreePort -Protocol Tcp }
 $password = [System.Guid]::NewGuid().ToString("N")
 $argumentList = @(
     "--start-server", $copy,
     "--server-settings", $settings,
     "--rcon-bind", "127.0.0.1:$Port",
     "--rcon-password", $password,
+    "--port", (Get-FreePort -Protocol Udp),
     "--disable-audio"
-)
+) + $target.LaunchArgs
 
 $process = Start-Process -FilePath $factorioExe -ArgumentList $argumentList `
     -NoNewWindow -RedirectStandardOutput $logFile `
@@ -113,6 +123,9 @@ if (-not $ready) {
 @{ host = "127.0.0.1"; port = $Port; password = $password; pid = $process.Id; copy = $copy } |
     ConvertTo-Json | Set-Content $stateFile -Encoding utf8
 
+# The two spell the flag differently: PowerShell -Instance, argparse --instance.
+$psFlag = if ($target.Name) { " -Instance $($target.Name)" } else { "" }
+$pyFlag = if ($target.Name) { " --instance $($target.Name)" } else { "" }
 Write-Host "Server up on 127.0.0.1:$Port serving $copy (pid $($process.Id))."
-Write-Host "Drive it with: python tools/check/probe_client.py"
-Write-Host "Stop it with:  powershell tools/check/probe.ps1 -Action stop"
+Write-Host "Drive it with: python tools/check/probe_client.py$pyFlag"
+Write-Host "Stop it with:  powershell tools/check/probe.ps1 -Action stop$psFlag"

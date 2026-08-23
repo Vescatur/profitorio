@@ -2,11 +2,26 @@
 # Starts a server with the dev save, waits for it to fully load,
 # then kills it and returns stdout/stderr so CI or Claude can check for errors.
 
-# The repo's own Factorio. The save is not beside it: the install ships
-# use-system-read-write-data-directories=true, so saves stay in %APPDATA%.
+param(
+    [string]$Instance = ""
+)
+
+# The repo's own Factorio. Without -Instance the save is not beside it: the install
+# ships use-system-read-write-data-directories=true, so saves stay in %APPDATA%.
+# With one, tools/lib/instance.ps1 moves the whole write-data directory instead.
 $repo        = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 $factorioExe = Join-Path $repo "factorio\bin\x64\factorio.exe"
-$saveName    = Join-Path $env:APPDATA "Factorio\saves\dev.zip"
+
+. (Join-Path $repo "tools\lib\instance.ps1")
+$target   = Get-FactorioInstance -Instance $Instance
+$saveName = Join-Path $target.Saves "dev.zip"
+
+# Beside the save, not in the caller's working directory. Two instances launched
+# from one shell would otherwise read each other's log and each report whatever
+# the other one did.
+$stdoutFile = Join-Path $target.State "prototypes-stdout.txt"
+$stderrFile = Join-Path $target.State "prototypes-stderr.txt"
+if (-not (Test-Path $target.State)) { New-Item -ItemType Directory -Path $target.State -Force | Out-Null }
 
 if (-not (Test-Path $factorioExe)) {
     Write-Error "Factorio executable not found at: $factorioExe"
@@ -18,15 +33,18 @@ if (-not (Test-Path $saveName)) {
     exit 1
 }
 
+# --start-server binds UDP 34197 unless told otherwise, so a second one fails on
+# the bind rather than on anything to do with the mod.
 $argumentList = @(
     "--start-server", $saveName,
+    "--port", (Get-FreePort -Protocol Udp),
     "--disable-audio"
-)
+) + $target.LaunchArgs
 
-Write-Host "Starting Factorio headless..."
+Write-Host "Starting Factorio headless$(if ($target.Name) { " [instance $($target.Name)]" })..."
 
 $process = Start-Process -FilePath $factorioExe -ArgumentList $argumentList `
-    -NoNewWindow -RedirectStandardOutput "factorio-stdout.txt" -RedirectStandardError "factorio-stderr.txt" `
+    -NoNewWindow -RedirectStandardOutput $stdoutFile -RedirectStandardError $stderrFile `
     -PassThru
 
 # Wait for the process to either exit on its own (error) or finish loading.
@@ -42,8 +60,8 @@ while ($elapsed -lt $timeout) {
         break
     }
 
-    if (Test-Path "factorio-stdout.txt") {
-        $content = Get-Content "factorio-stdout.txt" -Raw -ErrorAction SilentlyContinue
+    if (Test-Path $stdoutFile) {
+        $content = Get-Content $stdoutFile -Raw -ErrorAction SilentlyContinue
         if ($content -and $content -match "changing state from\(CreatingGame\) to\(InGame\)") {
             $loaded = $true
             break
@@ -62,13 +80,13 @@ if (-not $process.HasExited) {
 
 # Print output
 Write-Host "`n=== STDOUT ==="
-if (Test-Path "factorio-stdout.txt") {
-    Get-Content "factorio-stdout.txt"
+if (Test-Path $stdoutFile) {
+    Get-Content $stdoutFile
 }
 
 $stderr = ""
-if (Test-Path "factorio-stderr.txt") {
-    $stderr = Get-Content "factorio-stderr.txt" -Raw -ErrorAction SilentlyContinue
+if (Test-Path $stderrFile) {
+    $stderr = Get-Content $stderrFile -Raw -ErrorAction SilentlyContinue
 }
 if ($stderr) {
     Write-Host "`n=== STDERR ==="
@@ -76,8 +94,8 @@ if ($stderr) {
 }
 
 # Clean up temp files
-Remove-Item "factorio-stdout.txt" -ErrorAction SilentlyContinue
-Remove-Item "factorio-stderr.txt" -ErrorAction SilentlyContinue
+Remove-Item $stdoutFile -ErrorAction SilentlyContinue
+Remove-Item $stderrFile -ErrorAction SilentlyContinue
 
 # Determine exit code
 if ($errored) {

@@ -22,31 +22,40 @@
 # handle does give is the other half -- a client that dies during load exits, and
 # waiting the full timeout for a report that can never arrive is the difference
 # between a 4-second failure and a 4-minute one.
+#
+# This one does not parallelise even with -Instance: it opens a real window, so a
+# second copy fights the first for focus and the human's screen.
 
 param(
     [Parameter(Mandatory = $true)][string]$Lua,
     [string]$Scenario = "verify",
     [string[]]$Expect = @("report.txt"),
     [int]$Timeout = 240,
+    [string]$Instance = "",
     [switch]$Keep
 )
 
 # The repo's own Factorio, and it has to be the non-Steam build: launch a Steam
 # copy directly and it raises a confirmation dialog no script can answer, after
 # which the run reports "Scenario ... not found" for a directory plainly on disk.
-# Scenarios and script-output are not beside the executable -- the install ships
-# use-system-read-write-data-directories=true, so they stay in %APPDATA%.
+# Without -Instance, scenarios and script-output are not beside the executable --
+# the install ships use-system-read-write-data-directories=true, so they stay in
+# %APPDATA%.
 $repo         = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 $factorioExe  = Join-Path $repo "factorio\bin\x64\factorio.exe"
-$scenariosDir = Join-Path $env:APPDATA "Factorio\scenarios"
-$outputDir    = Join-Path $env:APPDATA "Factorio\script-output"
-$stateFile    = Join-Path $PSScriptRoot ".verify\rcon.json"
+
+. (Join-Path $repo "tools\lib\instance.ps1")
+$target       = Get-FactorioInstance -Instance $Instance
+$scenariosDir = $target.Scenarios
+$outputDir    = $target.Output
+$stateFile    = Join-Path $target.State "rcon.json"
 
 if (-not (Test-Path $factorioExe)) { Write-Error "Factorio executable not found at: $factorioExe"; exit 1 }
 if (-not (Test-Path $Lua)) { Write-Error "Harness not found at: $Lua"; exit 1 }
 
 # Both processes want the same user data directory, and the loser reports a lock
-# file problem rather than a conflict.
+# file problem rather than a conflict. Only this instance's server matters: a
+# server under another -Instance name holds a different lock.
 if (Test-Path $stateFile) {
     Write-Error "A verification server is running. Run tools/check/probe.ps1 -Action stop first."
     exit 1
@@ -59,8 +68,8 @@ New-Item -ItemType Directory -Path $scenarioDir -Force | Out-Null
 Copy-Item $Lua (Join-Path $scenarioDir "control.lua") -Force
 Remove-Item $collected -Recurse -Force -ErrorAction SilentlyContinue
 
-$process = Start-Process -FilePath $factorioExe -ArgumentList @(
-    "--load-scenario", $Scenario, "--disable-audio") -PassThru
+$process = Start-Process -FilePath $factorioExe -ArgumentList (@(
+    "--load-scenario", $Scenario, "--disable-audio") + $target.LaunchArgs) -PassThru
 
 $elapsed = 0
 $ready = $false
@@ -90,8 +99,7 @@ if (-not $ready) {
     # pcall their bodies and write the report regardless. Failing that, the game's
     # own log is the only witness.
     Write-Host "=== last errors from factorio-current.log ==="
-    $log = Join-Path $env:APPDATA "Factorio\factorio-current.log"
-    if (Test-Path $log) { Select-String -Path $log -Pattern "Error|Exception" | Select-Object -Last 8 }
+    if (Test-Path $target.Log) { Select-String -Path $target.Log -Pattern "Error|Exception" | Select-Object -Last 8 }
     if ($died) {
         Write-Error "Factorio exited with code $($process.ExitCode) before writing $($Expect -join ', ')."
     } else {

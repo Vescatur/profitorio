@@ -36,7 +36,19 @@ import sys
 import time
 from pathlib import Path
 
+REPO = Path(__file__).resolve().parents[2]
 STATE = Path(__file__).resolve().parent / ".verify" / "rcon.json"
+
+
+def state_for(instance=None):
+    """Where probe.ps1 wrote this instance's connection details.
+
+    Mirrors tools/lib/instance.ps1. None means the shared install, whose state
+    lives beside this script rather than under .factorio/.
+    """
+    if not instance:
+        return STATE
+    return REPO / ".factorio" / instance / "state" / "rcon.json"
 
 SERVERDATA_AUTH = 3
 SERVERDATA_EXECCOMMAND = 2
@@ -143,13 +155,16 @@ def main():
     parser.add_argument("--host")
     parser.add_argument("--port", type=int)
     parser.add_argument("--password")
-    parser.add_argument("--state", type=Path, default=STATE)
+    parser.add_argument("--state", type=Path, default=None)
+    parser.add_argument("--instance", default=None,
+                        help="read the port and password of this instance's server")
     parser.add_argument("--command", action="append", default=[],
                         help="run this instead of reading stdin; repeatable")
     arguments = parser.parse_args()
+    state = arguments.state or state_for(arguments.instance)
 
     try:
-        rcon = connect(arguments.host, arguments.port, arguments.password, arguments.state)
+        rcon = connect(arguments.host, arguments.port, arguments.password, state)
     except RconError as error:
         print(error, file=sys.stderr)
         return 2

@@ -57,6 +57,23 @@ MOD_NAME = "profitorio"
 DEFAULT_FACTORIO = str(REPO / "factorio" / "bin" / "x64" / "factorio.exe")
 REFERENCE_LANGUAGE = "en"
 
+
+def instance_paths(name: str | None) -> dict[str, Path] | None:
+    """Where one instance keeps its state. None means the shared install.
+
+    Mirrors tools/lib/instance.ps1; tools/setup/dev-mode.ps1 -Instance is what
+    creates the directory this points at.
+    """
+    if not name:
+        return None
+    root = REPO / ".factorio" / name
+    if not (root / "config.ini").is_file():
+        raise CheckError(
+            f"No instance '{name}' at {root}. "
+            f"Create it with: powershell tools/setup/dev-mode.ps1 -Instance {name}"
+        )
+    return {"config": root / "config.ini", "user_data": root / "data", "cache": root / "locale-cache"}
+
 # Locale dump file -> the prototype base class whose descendants it covers.
 # Every data.raw type is walked up its "Inherits from" chain (read out of
 # factorio-docs/) until it hits one of these; types that hit none -- item
@@ -184,24 +201,29 @@ def disable_all_but_base(mod_dir: Path) -> bool:
     return changed
 
 
-def dump_everything(exe: Path, user_data: Path, mod_dir: Path | None, cache: Path) -> None:
+def dump_everything(exe: Path, user_data: Path, mod_dir: Path | None, cache: Path,
+                    config: Path | None = None) -> None:
     script_output = user_data / "script-output"
     mod_args = ["--mod-directory", str(mod_dir)] if mod_dir else []
+    # Prefixed to every run, not just the modded ones: --config is what moves
+    # script-output, so a baseline dumped without it lands in %APPDATA% and
+    # collect() then reads whatever another instance left there.
+    base_args = ["--config", str(config)] if config else []
 
     print("Dumping base-only prototypes (baseline)...")
     baseline_mods = baseline_mod_dir(cache)
-    run_factorio(exe, ["--mod-directory", str(baseline_mods), "--dump-data"])
+    run_factorio(exe, [*base_args, "--mod-directory", str(baseline_mods), "--dump-data"])
     if disable_all_but_base(baseline_mods):
         # First run generated the list with the DLC enabled; redo it base-only.
-        run_factorio(exe, ["--mod-directory", str(baseline_mods), "--dump-data"])
+        run_factorio(exe, [*base_args, "--mod-directory", str(baseline_mods), "--dump-data"])
     collect(script_output, "data-raw-dump.json", cache / "baseline")
 
     print("Dumping modded prototypes...")
-    run_factorio(exe, [*mod_args, "--dump-data"])
+    run_factorio(exe, [*base_args, *mod_args, "--dump-data"])
     collect(script_output, "data-raw-dump.json", cache / "modded")
 
     print("Dumping prototype locale...")
-    run_factorio(exe, [*mod_args, "--dump-prototype-locale"])
+    run_factorio(exe, [*base_args, *mod_args, "--dump-prototype-locale"])
     collect(script_output, "*-locale.json", cache / "locale")
 
 
@@ -563,9 +585,21 @@ def main() -> int:
     parser.add_argument("--show-suppressed", action="store_true",
                         help="list the descriptions INTENTIONALLY_UNDESCRIBED filters out")
     parser.add_argument("--json", action="store_true", help="print the report as JSON")
+    parser.add_argument("--instance", default=None,
+                        help="run against .factorio/<name>/ instead of the shared install")
     args = parser.parse_args()
 
     try:
+        instance = instance_paths(args.instance)
+        config = instance["config"] if instance else None
+        # The default cache is one fixed directory under the system temp dir, so
+        # two concurrent runs overwrite each other's dumps and each reports on
+        # half the other's prototypes. Per-instance runs get their own.
+        if instance and parser.get_default("cache") == args.cache:
+            args.cache = str(instance["cache"])
+        if instance and parser.get_default("user_data_dir") == args.user_data_dir:
+            args.user_data_dir = str(instance["user_data"])
+
         cache = Path(args.cache)
         cache.mkdir(parents=True, exist_ok=True)
 
@@ -579,7 +613,7 @@ def main() -> int:
             if not (user_data / "script-output").is_dir():
                 (user_data / "script-output").mkdir(parents=True, exist_ok=True)
             mod_dir = Path(args.mod_directory) if args.mod_directory else None
-            dump_everything(exe, user_data, mod_dir, cache)
+            dump_everything(exe, user_data, mod_dir, cache, config)
 
         result = check_prototypes(cache, include_base=args.all)
         result["stale_keys"] = check_stale_keys(result.pop("prototype_names"))
