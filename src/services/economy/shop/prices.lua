@@ -19,25 +19,25 @@ local currency = require("services.economy.money.currency")
 local resources = {
     {
         item = "wood",
-        amount = 10,
+        amount = 1,
         price = 1,
         currency = currency.penny
     },
     {
         item = "iron-ore",
-        amount = 10,
-        price = 5,
+        amount = 2,
+        price = 1,
         currency = currency.penny
     },
     {
         item = "stone",
-        amount = 10,
+        amount = 1,
         price = 1,
         currency = currency.penny
     },
     {
         item = "copper-ore",
-        amount = 10,
+        amount = 4,
         price = 1,
         currency = currency.silver_coin
     },

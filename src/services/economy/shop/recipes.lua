@@ -2,7 +2,7 @@
 -- each. The other service that adds rather than removes, alongside loaders.lua.
 
 local recosts = {
-    ["burner-inserter"]      = { { type = "item", name = "wood",  amount = 10 } },
+    ["burner-inserter"]      = { { type = "item", name = "wood",  amount = 2 } },
     ["assembling-machine-1"] = { { type = "item", name = "stone", amount = 5 } },
 }
 

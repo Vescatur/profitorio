@@ -45,7 +45,7 @@ local tolls = {
     { recipe = "iron-chest", toll = false },
     { recipe = "iron-gear-wheel", toll = false },
     { recipe = "stone-furnace", toll = false },
-    { recipe = "transport-belt", toll = false },
+    { recipe = "transport-belt", currency.penny, amount = 2 },
     { recipe = "wooden-chest", toll = false },
     -- Smelting is free and has to stay free: every furnace has
     -- `source_inventory_size = 1`, so a tolled smelting recipe is uncraftable in
