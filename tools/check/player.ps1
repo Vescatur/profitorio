@@ -16,15 +16,12 @@
 #   * rendering. game.take_screenshot silently does nothing headless, so visual
 #     evidence has to come from the client.
 #
-# Launch goes through STEAM, exactly like tools/run/playtest.ps1. Running factorio.exe
-# directly raises a confirmation dialog no script can answer, and the run then
-# comes up unable to see the scenario at all -- "Scenario ... not found" for a
-# directory that is plainly on disk, which sends you hunting the wrong bug. Steam
-# passes trailing arguments straight through without asking.
-#
 # The harness writes its own verdict with helpers.write_file into script-output,
-# and that artefact appearing IS the completion signal: launching through Steam
-# leaves no process handle and no exit code to read.
+# and that artefact appearing IS the completion signal: the client keeps running
+# once the harness is done, so there is no exit to wait for. What the process
+# handle does give is the other half -- a client that dies during load exits, and
+# waiting the full timeout for a report that can never arrive is the difference
+# between a 4-second failure and a 4-minute one.
 
 param(
     [Parameter(Mandatory = $true)][string]$Lua,
@@ -34,14 +31,18 @@ param(
     [switch]$Keep
 )
 
-# Point at STEAM, not at Factorio -- see the note above.
-$steamExe     = "C:\Program Files (x86)\Steam\steam.exe"
-$factorioId   = "427520"
+# The repo's own Factorio, and it has to be the non-Steam build: launch a Steam
+# copy directly and it raises a confirmation dialog no script can answer, after
+# which the run reports "Scenario ... not found" for a directory plainly on disk.
+# Scenarios and script-output are not beside the executable -- the install ships
+# use-system-read-write-data-directories=true, so they stay in %APPDATA%.
+$repo         = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
+$factorioExe  = Join-Path $repo "factorio\bin\x64\factorio.exe"
 $scenariosDir = Join-Path $env:APPDATA "Factorio\scenarios"
 $outputDir    = Join-Path $env:APPDATA "Factorio\script-output"
 $stateFile    = Join-Path $PSScriptRoot ".verify\rcon.json"
 
-if (-not (Test-Path $steamExe)) { Write-Error "Steam executable not found at: $steamExe"; exit 1 }
+if (-not (Test-Path $factorioExe)) { Write-Error "Factorio executable not found at: $factorioExe"; exit 1 }
 if (-not (Test-Path $Lua)) { Write-Error "Harness not found at: $Lua"; exit 1 }
 
 # Both processes want the same user data directory, and the loser reports a lock
@@ -58,16 +59,12 @@ New-Item -ItemType Directory -Path $scenarioDir -Force | Out-Null
 Copy-Item $Lua (Join-Path $scenarioDir "control.lua") -Force
 Remove-Item $collected -Recurse -Force -ErrorAction SilentlyContinue
 
-# Steam hands back no handle for the game it launches, so the only safe cleanup is
-# to kill whatever appeared that was not running before -- never every factorio
-# process, in case one of them is a game being played.
-$before = @(Get-Process factorio -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Id)
-
-Start-Process -FilePath $steamExe -ArgumentList @(
-    "-applaunch", $factorioId, "--load-scenario", $Scenario, "--disable-audio")
+$process = Start-Process -FilePath $factorioExe -ArgumentList @(
+    "--load-scenario", $Scenario, "--disable-audio") -PassThru
 
 $elapsed = 0
 $ready = $false
+$died  = $false
 while ($elapsed -lt $Timeout) {
     Start-Sleep -Seconds 2
     $elapsed += 2
@@ -76,12 +73,15 @@ while ($elapsed -lt $Timeout) {
         if (-not (Test-Path (Join-Path $collected $name))) { $present = $false }
     }
     if ($present) { $ready = $true; break }
+    # Checked after the artefacts, not before: a harness that writes its report
+    # and then closes the game is a pass, and losing the race would call it a
+    # crash.
+    if ($process.HasExited) { $died = $true; break }
 }
 
-foreach ($running in (Get-Process factorio -ErrorAction SilentlyContinue)) {
-    if ($before -notcontains $running.Id) {
-        Stop-Process -Id $running.Id -Force -ErrorAction SilentlyContinue
-    }
+if (-not $process.HasExited) {
+    Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+    $process.WaitForExit(5000) | Out-Null
 }
 if (-not $Keep) { Remove-Item $scenarioDir -Recurse -Force -ErrorAction SilentlyContinue }
 
@@ -92,7 +92,11 @@ if (-not $ready) {
     Write-Host "=== last errors from factorio-current.log ==="
     $log = Join-Path $env:APPDATA "Factorio\factorio-current.log"
     if (Test-Path $log) { Select-String -Path $log -Pattern "Error|Exception" | Select-Object -Last 8 }
-    Write-Error "Harness did not produce $($Expect -join ', ') within ${Timeout}s."
+    if ($died) {
+        Write-Error "Factorio exited with code $($process.ExitCode) before writing $($Expect -join ', ')."
+    } else {
+        Write-Error "Harness did not produce $($Expect -join ', ') within ${Timeout}s."
+    }
     exit 1
 }
 

@@ -2,8 +2,11 @@
 # Starts a server with the dev save, waits for it to fully load,
 # then kills it and returns stdout/stderr so CI or Claude can check for errors.
 
-$factorioExe = "C:\Program Files (x86)\Steam\steamapps\common\Factorio\bin\x64\factorio.exe"
-$saveName    = "$env:APPDATA\Factorio\saves\dev.zip"
+# The repo's own Factorio. The save is not beside it: the install ships
+# use-system-read-write-data-directories=true, so saves stay in %APPDATA%.
+$repo        = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
+$factorioExe = Join-Path $repo "factorio\bin\x64\factorio.exe"
+$saveName    = Join-Path $env:APPDATA "Factorio\saves\dev.zip"
 
 if (-not (Test-Path $factorioExe)) {
     Write-Error "Factorio executable not found at: $factorioExe"
@@ -15,14 +18,14 @@ if (-not (Test-Path $saveName)) {
     exit 1
 }
 
-$args = @(
+$argumentList = @(
     "--start-server", $saveName,
     "--disable-audio"
 )
 
 Write-Host "Starting Factorio headless..."
 
-$process = Start-Process -FilePath $factorioExe -ArgumentList $args `
+$process = Start-Process -FilePath $factorioExe -ArgumentList $argumentList `
     -NoNewWindow -RedirectStandardOutput "factorio-stdout.txt" -RedirectStandardError "factorio-stderr.txt" `
     -PassThru
 

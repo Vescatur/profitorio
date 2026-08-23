@@ -52,7 +52,9 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
 MOD_NAME = "profitorio"
-DEFAULT_FACTORIO = r"C:\Program Files (x86)\Steam\steamapps\common\Factorio\bin\x64\factorio.exe"
+# The repo's own Factorio. Its script-output is not beside it: the install ships
+# use-system-read-write-data-directories=true, so the dumps land in %APPDATA%.
+DEFAULT_FACTORIO = str(REPO / "factorio" / "bin" / "x64" / "factorio.exe")
 REFERENCE_LANGUAGE = "en"
 
 # Locale dump file -> the prototype base class whose descendants it covers.

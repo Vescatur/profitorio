@@ -121,16 +121,11 @@ Each of these cost a round trip:
 - **A running server holds the lock file.** `prototypes.ps1` then fails with
   `Couldn't create lock file`, which reads exactly like a mod error. Always stop.
 - **Headless renders nothing.** `take_screenshot` silently does nothing there.
-- **Launch the client through Steam, never `factorio.exe` directly.** Direct launch
-  raises a confirmation dialog no script can answer, and the run then comes up unable
-  to see its own scenario — `Scenario ... not found` for a directory that is plainly
-  on disk. Hours can go into that false trail. `tools/check/player.ps1` and
-  `tools/run/playtest.ps1` both go through `steam.exe -applaunch 427520`, which passes
-  trailing arguments through without asking. Headless (`--start-server`) is fine
-  launched directly — no dialog, and it needs stdout redirection Steam cannot give.
-- **Steam gives you no process handle.** Clean up by killing only the `factorio`
-  processes that were not running before you launched; never all of them, in case one
-  is a game being played.
+- **The artefact is the pass signal, not the exit code.** Every script launches
+  `factorio/bin/x64/factorio.exe` directly, so `player.ps1` holds a real process
+  handle — but the client keeps running after a harness finishes, so there is no exit
+  to wait for. The handle buys the failure case: a client that dies during load fails
+  in seconds instead of at the timeout.
 - **`pcall` probe bodies and write the report regardless.** A renamed API kills the
   whole run otherwise — `game.active_mods` became `script.active_mods` in 2.0 and took
   one scenario down with nothing to read.

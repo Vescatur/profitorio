@@ -2,8 +2,9 @@
 
 ## Prerequisites
 
-- **Factorio 2.1.14**, installed and copied into `factorio/` — see [Install Factorio](#1-install-factorio)
-- **Steam** at `C:\Program Files (x86)\Steam\steam.exe` — only `tools/run/playtest.ps1` needs it
+- **Factorio 2.1.14**, installed and copied into `factorio/` — see [Install Factorio](#1-install-factorio).
+  Every script in `tools/` launches `factorio/bin/x64/factorio.exe`, so there is nothing else to install
+  and no Steam involved
 - **VSCode** with [Factorio Mod Debug](https://marketplace.visualstudio.com/items?itemName=justarandomgeek.factoriomod-debug) extension (provides Lua intellisense for Factorio API)
 
 ## Initial Setup
@@ -24,8 +25,9 @@ Copy-Item "C:\Program Files\Factorio" ".\factorio" -Recurse
 
 `factorio/` is gitignored: it is a local copy of the game, not part of the mod.
 
-The version is pinned rather than `stable` because `factorio-docs/markdown/` is generated from
-2.1.14 — pinning is what keeps the API reference and the running engine the same version.
+The version is pinned rather than `stable` so an engine upgrade is a deliberate act. The API
+reference cannot fall behind it either way: `factorio-docs/markdown/` is generated from
+`factorio/doc-html`, the docs bundle shipped by this very install.
 
 `expansion` is the build that includes Space Age. It bundles `space-age`, `elevated-rails`,
 `quality` and `recycler` into `factorio/data/`, and **all four must stay disabled** — the mod is base
@@ -58,14 +60,14 @@ which silently makes a release build untested.
 
 ### 3. Launch for Development
 
-Run `tools/run/playtest.ps1` to start Factorio via Steam with the dev save:
+Run `tools/run/playtest.ps1` to start the repo's own Factorio on the dev save:
 
 ```powershell
 .\tools\run\playtest.ps1
 ```
 
 This launches Factorio with:
-- `--load-game dev.zip` (the dev save file)
+- `--load-game` on `%APPDATA%\Factorio\saves\dev.zip` (the dev save file)
 - `--disable-audio` (faster startup)
 
 ## Project Structure

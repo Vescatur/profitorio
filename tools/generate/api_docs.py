@@ -6,8 +6,12 @@ Source of truth is the machine-readable API dump that ships with the docs
 generated from. Only the 14 prose pages under `auxiliary/` have no JSON
 representation, so those are converted from HTML.
 
+The bundle ships inside the install as `factorio/doc-html`, which is the default
+source: nothing to download, and the reference cannot drift from the engine it
+documents.
+
 Usage:
-    python tools/generate/api_docs.py [--src factorio-docs/html] [--out factorio-docs/markdown]
+    python tools/generate/api_docs.py [--src factorio/doc-html] [--out factorio-docs/markdown]
 
 Stdlib only, deterministic, idempotent.
 """
@@ -814,7 +818,10 @@ def write(path: Path, text: str) -> None:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     root = Path(__file__).resolve().parents[2]
-    ap.add_argument("--src", type=Path, default=root / "factorio-docs" / "html")
+    # The install ships the bundle in doc-html/, so the source and the running
+    # engine are the same version by construction rather than by remembering to
+    # re-download after an upgrade.
+    ap.add_argument("--src", type=Path, default=root / "factorio" / "doc-html")
     ap.add_argument("--out", type=Path, default=root / "factorio-docs" / "markdown")
     ap.add_argument("--clean", action="store_true", help="wipe the output dir first")
     args = ap.parse_args()

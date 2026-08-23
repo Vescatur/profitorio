@@ -20,10 +20,6 @@
 #     fails with "Couldn't create lock file" and reads exactly like a mod error.
 #     Always -Action stop when finished.
 
-# Unlike tools/check/player.ps1 this launches factorio.exe directly rather than
-# through Steam: --start-server raises no confirmation dialog, and stdout has to be
-# redirected to watch for the RCON port opening, which a Steam launch cannot do.
-
 param(
     [ValidateSet("start", "stop")]
     [string]$Action = "start",
@@ -31,7 +27,10 @@ param(
     [int]$Port = 27015
 )
 
-$factorioExe = "C:\Program Files (x86)\Steam\steamapps\common\Factorio\bin\x64\factorio.exe"
+# The repo's own Factorio. Saves are not beside it: the install ships
+# use-system-read-write-data-directories=true, so they stay in %APPDATA%.
+$repo        = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
+$factorioExe = Join-Path $repo "factorio\bin\x64\factorio.exe"
 $savesDir    = Join-Path $env:APPDATA "Factorio\saves"
 $stateDir    = Join-Path $PSScriptRoot ".verify"
 $stateFile   = Join-Path $stateDir "rcon.json"

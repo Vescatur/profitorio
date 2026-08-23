@@ -65,7 +65,6 @@ BUDGETS = {
     # CLAUDE.md this is read on demand, so its budget guards sprawl, not token cost.
     "docs/dev-setup.md": 2000,
     "docs/game-design.md": 1000,
-    "docs/loader-binding-plan.md": 1200,
     ".claude/skills/verify-in-engine/SKILL.md": 1600,
     ".claude/skills/add-customer-order/SKILL.md": 1200,
     ".claude/skills/tune-economy/SKILL.md": 1200,
@@ -74,10 +73,7 @@ BUDGETS = {
 # Backticked strings that look like paths but are not ours to have on disk.
 # "*" globs. An entry matching nothing is reported, so this list cannot rot
 # quietly after a rename.
-INTENTIONALLY_ABSENT = [
-    # Gitignored: real paths, absent on a clean clone.
-    "factorio-docs/html/",
-]
+INTENTIONALLY_ABSENT: list[str] = []
 
 # Headings generic enough to repeat honestly. Anything else appearing twice is
 # a second copy of a section starting.

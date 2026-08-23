@@ -110,8 +110,8 @@ hand the item back when it is refused.
   and a bare spill. Names the item off the entity, and `assert`s that item exists — a refusal that
   refunds nothing reads in game as the building vanishing.
 
-The measured engine behaviour behind all of this is recorded in
-[loader-binding-plan.md](loader-binding-plan.md).
+The measured engine behaviour behind all of this is recorded as a truth table in
+`logistics/loader_binding.lua` itself.
 
 ## `services/removals/`
 

@@ -2,8 +2,11 @@
     // Matches .gitattributes -- new files are created with LF so they do not
     // reintroduce the CRLF/LF split that made the release zip differ per machine.
     "files.eol": "\n",
+    // The repo's own install, so intellisense and the engine the scripts launch
+    // are the same version. Absolute because the sibling userThirdParty path has
+    // to be anyway -- both are machine-local, neither is portable.
     "Lua.workspace.library": [
-        "c:\\Program Files (x86)\\Steam\\steamapps\\common\\Factorio\\data"
+        "c:\\Users\\Ivan\\Documents\\Develop\\factorio\\profitorio\\factorio\\data"
     ],
     "Lua.workspace.userThirdParty": [
         "c:\\Users\\Ivan\\AppData\\Roaming\\Code\\User\\workspaceStorage\\af7c0f2f7642e5d90dd56646664ea5f8\\justarandomgeek.factoriomod-debug\\sumneko-3rd"

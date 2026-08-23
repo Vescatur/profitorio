@@ -1,19 +1,27 @@
-# Point to your STEAM executable, NOT the Factorio executable
-$steamExe   = "C:\Program Files (x86)\Steam\steam.exe"
-$factorioId = "427520"
-$saveName   = "dev.zip"
+# Launch the repo's own Factorio on the dev save.
+#
+# Mods and saves are NOT inside factorio/: the install ships
+# use-system-read-write-data-directories=true in config-path.cfg, so they stay in
+# %APPDATA%\Factorio wherever the install itself sits -- which is the folder
+# tools/setup/dev-mode.ps1 junctions src/ into. Every script here follows suit.
 
-if (-not (Test-Path $steamExe)) {
-    Write-Error "Steam executable not found at: $steamExe"
+$repo        = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
+$factorioExe = Join-Path $repo "factorio\bin\x64\factorio.exe"
+$save        = Join-Path $env:APPDATA "Factorio\saves\dev.zip"
+
+if (-not (Test-Path $factorioExe)) {
+    Write-Error "Factorio executable not found at: $factorioExe"
     exit 1
 }
 
-# Combine the Steam launch command with your Factorio arguments
-$args = @(
-    "-applaunch", $factorioId,
-    "--load-game", $saveName,
+if (-not (Test-Path $save)) {
+    Write-Error "Save file not found at: $save"
+    exit 1
+}
+
+$argumentList = @(
+    "--load-game", $save,
     "--disable-audio"
 )
 
-# Tell Steam to run it. Steam accepts its own arguments and passes the rest to Factorio without a warning.
-Start-Process -FilePath $steamExe -ArgumentList $args
+Start-Process -FilePath $factorioExe -ArgumentList $argumentList

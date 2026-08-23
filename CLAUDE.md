@@ -159,7 +159,7 @@ One clause per file. The reasoning is in [docs/architecture.md](docs/architectur
 - `services/removals/` — `ore`, `electricity`, `enemies`, `military`, `uranium`
 - `services/interface/item_groups.lua` — the Profitorio tab and its subgroup ordering
 - `art/icons/` — SVG sources. **Edit these, not the generated `src/graphics/icons/` PNGs**
-- `factorio/` — local copy of the 2.1.14 install (gitignored); `docs/dev-setup.md` has the steps
+- `factorio/` — the 2.1.14 install every script launches (gitignored); `docs/dev-setup.md` has the steps
 - `tools/` — dev scripts by purpose; every folder carries a README
 
 ## Money
@@ -268,8 +268,8 @@ the file directly if you know the name; otherwise grep the relevant `index.md` f
 | `defines.*` enums | `defines/defines.md` |
 | Prose guides (data lifecycle, mod structure, migrations) | `auxiliary/` |
 
-Regenerate after a Factorio update by re-downloading the bundle into `factorio-docs/html/`
-(gitignored) and running `python tools/generate/api_docs.py --clean`.
+Regenerate after a Factorio update with `python tools/generate/api_docs.py --clean`. The source is
+`factorio/doc-html`, which ships inside the install, so the reference cannot drift from the engine.
 
 ## Dev setup
 
