@@ -6,7 +6,8 @@
     // are the same version. Absolute because the sibling userThirdParty path has
     // to be anyway -- both are machine-local, neither is portable.
     "Lua.workspace.library": [
-        "c:\\Users\\Ivan\\Documents\\Develop\\factorio\\profitorio\\factorio\\data"
+        "c:\\Users\\Ivan\\Documents\\Develop\\factorio\\profitorio\\factorio\\data",
+        "C:\\Git\\profitorio\\profitorio\\factorio\\data"
     ],
     "Lua.workspace.userThirdParty": [
         "c:\\Users\\Ivan\\AppData\\Roaming\\Code\\User\\workspaceStorage\\af7c0f2f7642e5d90dd56646664ea5f8\\justarandomgeek.factoriomod-debug\\sumneko-3rd"
