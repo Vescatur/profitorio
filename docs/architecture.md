@@ -55,6 +55,14 @@ The denomination ladder, and what everything costs.
 - **`currency.lua`** — re-skins six science packs into currency denominations, and is the module the
   rest of the mod asks for currency item names. Its return table also carries a `technology` key: a
   nested map from denomination to pack name, which `orders.lua` reads to find each band's licence.
+- **`exchange.lua`** — change-making: one recipe per conversion, breaking a denomination into the
+  one below at an authored rate that is always a loss. Its own `exchange` crafting category, handed
+  to the Import machine and deliberately not to the character, so a coin cannot be broken by hand.
+  Every row asserts `to` sits below `from`: an exchange running *up* the ladder would let the
+  factory mint the coin gating the next tier of research, which is the gate the whole economy rests
+  on. `tolls.lua` exempts the category from the toll list, and `verify_orders.lua` leaves it out of
+  the cost graph — money is priced at face value there, so a conversion recipe would only hang a
+  cycle on it.
 - **`tolls.lua`** — charges a coin to craft. One row per **vanilla recipe** — every one of them —
   naming the denomination and how many coins it costs, or `toll = false` for free, grouped by the
   technology that unlocks it and ordered by the licence that technology invoices. The list must stay

@@ -89,4 +89,15 @@ for _, denomination in ipairs(denominations) do
     currency.technology[denomination.key] = denomination.pack
 end
 
+-- `ladder` is the same six names cheapest-first and `rank` their positions on it, so a
+-- rung comparison reads off the table that defines the order rather than a second copy
+-- of it. tolls.lua re-exports both; exchange.lua needs them at the data stage, before
+-- tolls has run.
+currency.ladder = {}
+currency.rank = {}
+for index, denomination in ipairs(denominations) do
+    currency.ladder[index] = denomination.pack
+    currency.rank[denomination.pack] = index
+end
+
 return currency
