@@ -23,10 +23,11 @@ local tolls = require("services.economy.money.tolls")
 local ladder = tolls.ladder
 local rank = tolls.rank
 
--- Comparing two cost vectors needs a scalar, and any scalar is a design-time
--- comparator rather than an exchange rate: nothing in the game converts one
--- denomination into another. Weighting each rung far above the one below means
--- "cheapest" prefers the route needing the lowest licence.
+-- Comparing two cost vectors needs a scalar, and this one is a design-time comparator,
+-- deliberately not the game's exchange rate. money/exchange.lua breaks a coin at 1:5;
+-- weighting each rung 100x the one below overprices the upper rungs against that, so
+-- "cheapest" still prefers the route needing the lowest licence. That direction is the
+-- safe one -- it can only overstate what an order costs.
 local function scalarise(vector)
     local total = 0
     for at = 1, #ladder do
@@ -66,7 +67,13 @@ for fluid in pairs(free_fluids) do
 end
 
 
-local own_categories = { entrance = true, import = true, export = true, parameters = true }
+-- Categories left out of the cost graph. `exchange` is here on purpose: money is
+-- priced at face value and never resolved further, so a conversion recipe would hang a
+-- producer on the graph for an item nothing ever asks the cost of -- and if anything
+-- ever did, penny -> silver -> penny is a cycle that prices itself.
+local own_categories = {
+    entrance = true, import = true, export = true, parameters = true, exchange = true
+}
 
 local producers = {}
 
@@ -222,6 +229,9 @@ for _, order in ipairs(customers.orders) do
         refunded[rank[name]] = amount
     end
 
+    -- Rung by rung, and no credit for change-making: a refund has to cover its bill in
+    -- the denomination the bill is in, even though the exchange could break a dearer
+    -- coin into it. Strict in the safe direction.
     for at = 1, #ladder do
         local due = owed[at] or 0
         local paid = refunded[at] or 0

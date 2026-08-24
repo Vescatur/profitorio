@@ -279,11 +279,12 @@ economy design decision, not a revert.
 
 ### Money is earned, never crafted
 
-The five remaining vanilla pack recipes are **deleted**, not hidden. Red is 1 copper plate + 1 iron gear wheel
-and green is an inserter + a belt, all craftable from purchased plates — leaving those recipes in
-would let the factory print its own money and the customer economy would stop mattering. There is
-also **no exchange between denominations**, in either direction. Both rules exist to keep one
-property true: the denomination a customer pays in is what gates the tier of research you can afford.
+The five remaining vanilla pack recipes are **deleted**, not hidden. Red is copper plate + gear and
+green is inserter + belt, all craftable from purchased plates — leaving them in would let the factory
+print its own money. Exchange between denominations runs **downward only** (`exchange.lua`), at a
+rate that is always a loss: a coin breaks into smaller ones and nothing assembles one from smaller
+ones. Both rules keep one property true: the denomination a customer pays in gates the tier of
+research you can afford.
 
 ### Bond and Gold are partly parallel
 

@@ -41,10 +41,10 @@ it is: [architecture](docs/architecture.md).
 - **The penny band's top order must keep its Silver bridge** — it is the only source of the first
   Silver Coin, and without it the `electronics` trigger can never fire and no research is ever
   possible
-- **Money is earned, never crafted** — the science pack recipes are deleted, not hidden, because red
-  and green are craftable from purchased plates and would let the factory print its own money. Never
-  restore a recipe that produces a currency item, and never add an exchange recipe between
-  denominations: what a customer pays is what gates the tier of research you can afford
+- **Money is earned, never printed** — the science pack recipes are deleted, not hidden: red and
+  green are craftable from purchased plates and would print money. Never restore a recipe producing a
+  currency item. The one exception is exchange, **down the ladder only**: a coin breaks into smaller
+  ones, never the reverse, or the factory mints the coin gating the next research tier
 - **A customer's five minutes never reset** — `orders.lua` gives every customer item one
   `total_life_seconds` timer, and a delivery's successor carries **no `always_fresh`** so it inherits
   the spoil percentage of the customer it replaced. That absence is the whole rule: re-adding the
@@ -181,6 +181,7 @@ One clause per file. The reasoning is in [docs/architecture.md](docs/architectur
 - `services/economy/customers/export.lua` — the delivery payouts, and each band's licence
 - `services/economy/customers/verify_orders.lua` — emits nothing; asserts refunds still cover cost
 - `services/economy/money/currency.lua` — the denomination ladder, and the names it owns
+- `services/economy/money/exchange.lua` — breaks a coin downward, never up
 - `services/economy/money/tolls.lua` — one row per vanilla recipe: what a craft costs
 - `services/economy/shop/prices.lua` — the `buy_*` price list
 - `services/economy/shop/import.lua` — the machine that crafts them
@@ -211,9 +212,9 @@ is where profit is spent.
 | `utility-science-pack` | Gold Bar |
 | `space-science-pack` | Diamond |
 
-Never spell those prototype names out elsewhere — `require("services.economy.money.currency")`
-returns a `{ penny = "automation-science-pack", ... }` map plus a `technology` key holding each
-band's licence. Ask it by denomination.
+Never spell those prototype names out elsewhere: `require("services.economy.money.currency")`
+returns a map by denomination, plus `technology` (each band's licence) and `ladder`/`rank` (the
+order).
 
 `military-science-pack` is **not** money and must not be re-added to the ladder
 ([why](docs/customer-system.md#the-seventh-pack-why-there-is-no-war-chest)).

@@ -4,27 +4,22 @@
 -- deliver.
 local currency = require("services.economy.money.currency")
 
--- Cheapest denomination first. verify_orders.lua reads this to compare costs.
-local ladder = {
-    currency.penny,
-    currency.silver_coin,
-    currency.banknote,
-    currency.bond,
-    currency.gold_bar,
-    currency.diamond,
-}
-
-local rank = {}
-for index, name in ipairs(ladder) do
-    rank[name] = index
-end
+-- Cheapest denomination first, from currency.lua, which is where that order is
+-- defined. Both are re-exported at the bottom: verify_orders.lua reads them from here.
+local ladder = currency.ladder
+local rank = currency.rank
 
 -- Profitorio's three machines. Each name is both a crafting category and the recipe
 -- that builds the machine, so this one list covers the buildings and everything they
 -- craft. None of it is vanilla, so none of it is in the table below -- and none of it
 -- may ever be tolled, since money must not be an ingredient of a recipe that makes
 -- money.
-local own_machines = { entrance = true, import = true, export = true }
+--
+-- `exchange` is the exception to that naming: a crafting category with no machine of
+-- its own, crafted by the Import machine (money/exchange.lua). It is listed so the
+-- completeness check below does not demand a toll row for a recipe whose only
+-- ingredient is money already.
+local own_machines = { entrance = true, import = true, export = true, exchange = true }
 
 -- Every vanilla recipe, grouped by the technology that unlocks it and ordered by the
 -- licence that technology invoices -- the coin the player had to have earned already

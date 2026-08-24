@@ -1,9 +1,9 @@
--- The Profitorio tab and the four subgroups that order its contents.
+-- The Profitorio tab and the five subgroups that order its contents.
 --
 -- These stay together rather than moving next to the module that fills each
 -- one, because the `order` letters only make sense read side by side: the
 -- customers walking in come first, the orders they place next, then the money
--- they pay with, and the shop that spends it last.
+-- they pay with, the change made from it, and the shop that spends it last.
 data:extend({
     {
         type = "item-group",
@@ -30,6 +30,13 @@ data:extend({
         name = "currency",
         group = "customer-group",
         order = "y"
+    },
+    -- Change-making, between the coins and the goods they buy.
+    {
+        type = "item-subgroup",
+        name = "currency-exchange",
+        group = "customer-group",
+        order = "ya"
     },
     {
         type = "item-subgroup",

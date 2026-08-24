@@ -1,11 +1,11 @@
 ---
 name: tune-economy
-description: Change what something costs in Profitorio — a shop price in src/services/economy/shop/prices.lua, or a crafting toll in src/services/economy/money/tolls.lua. Use when asked to add or reprice a purchasable resource, change what a recipe costs to craft, make something free or more expensive, add a toll row for a new vanilla recipe, or when a load fails naming an untolled recipe, logs a "[tolls] DRIFT:" line, or fails a verify_orders refund assertion.
+description: Change what something costs in Profitorio — a shop price in src/services/economy/shop/prices.lua, a crafting toll in src/services/economy/money/tolls.lua, or an exchange rate in src/services/economy/money/exchange.lua. Use when asked to add or reprice a purchasable resource, change what a recipe costs to craft, make something free or more expensive, add a toll row for a new vanilla recipe, retune what breaking a coin pays out or add a conversion between two denominations, or when a load fails naming an untolled recipe, logs a "[tolls] DRIFT:" line, or fails a verify_orders refund assertion.
 ---
 
 # Tune a price or a toll
 
-Two tables, one verification loop. Both change what a good embeds, so both invalidate the authored
+Three tables, one verification loop. Both change what a good embeds, so both invalidate the authored
 refunds in `orders.lua` — and `verify_orders.lua` re-solves the whole recipe graph at the next load
 and names every order that no longer covers its cost. That shared failure is why these live
 together.
@@ -59,6 +59,23 @@ Say why beside the row. The six groups already in the table:
 - **engine placeholders** — `parameter-0` .. `parameter-9`, `recipe-unknown`
 - **fluid-in/fluid-out recipes** — nowhere to hand a coin to
 - **barrel fill and empty** — that taxes logistics, not production
+
+## Exchange rates — `services/economy/money/exchange.lua`
+
+One row per conversion: `from` and `to` (denomination keys, not pack names), plus `spend`, `receive`
+and `seconds`. All five are written out on every row even though the rate is 1:5 on all of them.
+
+- **Direction is asserted, not tuned.** `to` has to sit below `from` on the ladder, and an upward or
+  sideways row fails the load naming the pair — it would let the factory mint the coin that gates
+  the next tier of research.
+- **The rate should stay a loss.** The refund table pays around 8 Pennies for the work that earns
+  one Silver Coin, so 5 keeps change-making a convenience rather than an income. Nothing enforces
+  that: there is no reference rate to solve against, so it is judgement, not a check.
+- **`verify_orders.lua` ignores these recipes**, by category. A rate change cannot make an order's
+  refund go short, so unlike a price or a toll it needs no refund pass.
+
+A non-adjacent pair — Diamond straight to Penny — is a new row and nothing else. The schema already
+takes any pair that goes down.
 
 ## The constraint that bites
 
