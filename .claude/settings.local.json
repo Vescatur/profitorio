@@ -29,7 +29,11 @@
       "PowerShell(Get-Item *)",
       "Read(../profitorio-agents/**)",
       "Edit(../profitorio-agents/**)",
-      "Write(../profitorio-agents/**)"
+      "Write(../profitorio-agents/**)",
+      "PowerShell(.\\tools\\agent\\start.ps1 *)",
+      "PowerShell(.\\tools\\agent\\integrate.ps1 *)",
+      "PowerShell(.\\tools\\agent\\land.ps1)",
+      "PowerShell(.\\tools\\agent\\finish.ps1 *)"
     ],
     "defaultMode": "auto"
   },
@@ -43,7 +47,8 @@
       "Deleting or regenerating build output: src/graphics/icons, tools/profitorio_*.zip, factorio-docs/html, and the scratchpad directory",
       "Fetching Factorio documentation and mod-portal pages",
       "Local git operations in this repository: status, diff, log, add, commit, branch, checkout, merge, rebase, stash, worktree, and push",
-      "Creating and removing agent worktrees under ../profitorio-agents/ and the sibling profitorio.code-workspace file"
+      "Creating and removing agent worktrees under ../profitorio-agents/ and the sibling profitorio.code-workspace file",
+      "Running the tools/agent/ ladder to completion, including land.ps1 merging an agent/<task> branch into the local main branch with --no-ff, and finish.ps1 removing the worktree, branch and Factorio instance. main is never pushed, so this stays local and is recoverable from the reflog"
     ]
   }
 }

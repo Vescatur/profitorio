@@ -151,12 +151,13 @@ and a Factorio instance. Every `tools/` call you make from then on carries `-Ins
 1. Do the work. **Leave it uncommitted**, run the three checks, and ask for review.
 2. Rework until approved. Then `tools/agent/integrate.ps1 -Message "<terse one-liner>"` — it
    commits, pulls `main` in and re-runs the checks.
-3. Ask for review again: the integrated tree, still uncommitted. This is where a change that was
-   fine alone but breaks in combination shows up.
+3. If the merge brought anything in, ask for review again: the integrated tree, still uncommitted,
+   where a change that was fine alone but breaks in combination shows up. When `main` had not moved
+   the script says so -- nothing was merged, nothing new to read, land it.
 4. `tools/agent/land.ps1`, then `cd` to the primary and `tools/agent/finish.ps1 -Task <name>`.
 
-- **Two review gates, both on uncommitted code.** Nothing reaches `main` the human has not read.
-  Never commit past a gate to make progress.
+- **Both review gates are on uncommitted code.** Nothing reaches `main` unread. Never commit past
+  a gate to make progress.
 - **Resolve your own conflicts, in your own worktree.** Never in the primary one.
 - **If the primary worktree is dirty, stop and say so.** Never stash, commit or revert work that
   is not yours. Both scripts refuse on their own; do not work around them.

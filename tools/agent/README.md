@@ -22,6 +22,15 @@ Because `integrate.ps1` merges `main` in under the lock and `land.ps1` refuses i
 moved since, the merge into `main` cannot conflict. Every conflict is resolved in your own
 worktree, which is the only place you are allowed to resolve one.
 
+## When review 2 is skipped
+
+`integrate.ps1` asks whether `main` was already an ancestor of your branch *before* it merges —
+afterwards there is no way to tell "already in" from "merged cleanly". If nothing came in, the
+integrated tree is byte-identical to the one review 1 approved, so the script says so and you go
+straight to `land.ps1`. Review 2 exists to catch a change that was fine alone and breaks in
+combination; with no combination it costs a person's attention and buys nothing. Conflicts always
+mean something came in, so the resume path never skips it.
+
 ## Two traps
 
 - **`finish.ps1` unlinks junctions before it deletes anything, and so must you.** A worktree
