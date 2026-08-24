@@ -38,9 +38,10 @@ Not a service; required by the ones below.
 
 Who walks in, what they order, and the machines that make and pay them.
 
-- **`orders.lua`** — the band and order tables, the customer items, the one five-minute life they
-  all share, and the generated spawn weights. Returns the bands, the orders and each order's item
-  name; the recipes that consume them live with the machine that crafts them.
+- **`orders.lua`** — the band table and the order ladder, the customer items, the one five-minute
+  life they all share, and the successor each authored step resolves to. Returns the bands, the
+  orders and each order's item name; the recipes that consume them live with the machine that
+  crafts them.
 - **`entrance.lua`, `export.lua`** — two of the three machines the whole loop runs through (the
   third is `economy/shop/import.lua`), plus the recipes they craft: `customer-new` and the
   `customer_*_deliver` payouts. `export.lua` also wires each band's licence onto its technology.
