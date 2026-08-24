@@ -51,9 +51,9 @@ local bands = {
 -- copper: copper costs Silver, and only the penny band mints one.
 local orders = {
     -- Penny -- wood, stone and iron, all hand-craftable, no research at all.
-    { band = 1, grade = 1, item = "burner-inserter",        amount = 2,   refund = { penny = 4 }, profit = 4,
+    { band = 1, grade = 1, item = "burner-inserter",        amount = 2, refund = { penny = 4 }, profit = 4,
       spawn = { 80, 20, 0 } },
-    { band = 1, grade = 2, item = "assembling-machine-1",   amount = 2,  refund = { penny = 12 }, profit = 8,
+    { band = 1, grade = 2, item = "assembling-machine-1",   amount = 2, refund = { penny = 12 }, profit = 8,
       spawn = { 30, 40, 30 } },
     { band = 1, grade = 3, item = "transport-belt",         amount = 5, refund = { penny = 9 },  profit = 4,
       spawn = { 10, 20, 40, up = 30 } },
