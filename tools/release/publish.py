@@ -288,8 +288,8 @@ def cmd_publish(args: argparse.Namespace) -> None:
     if args.description_file:
         fields["description"] = Path(args.description_file).read_text(encoding="utf-8")
 
-    # Gate before prepare_release: without --yes this is a dry run, and building
-    # would uninstall the dev junction for a command that then does nothing.
+    # Gate before prepare_release: without --yes this is a dry run, and it would
+    # otherwise bump the version in src/info.json for a command that then does nothing.
     if not args.yes:
         raise SystemExit(
             f"This creates the public mod page for '{info['name']}' and cannot be undone.\n"
@@ -335,8 +335,6 @@ def cmd_update(args: argparse.Namespace) -> None:
         raise
 
     print(f"Released {info['version']}: https://mods.factorio.com/mod/{info['name']}")
-    if not args.zip:
-        print("Mods folder now holds the zip -- run tools/setup/dev-mode.ps1 for dev mode.")
 
 
 def main() -> None:

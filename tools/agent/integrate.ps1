@@ -76,6 +76,11 @@ if (-not $resuming) {
     Enter-MergeLock -Holder $task
     try {
         git -C $repo rev-parse main | Set-Content $baseFile -Encoding utf8
+        # Asked before the merge, not after: once it has run there is no longer a
+        # way to tell "main was already in" from "it merged cleanly". A native
+        # command's non-zero exit does not throw, so $LASTEXITCODE is the answer.
+        git -C $repo merge-base --is-ancestor main HEAD
+        $mergedNothing = ($LASTEXITCODE -eq 0)
         $ErrorActionPreference = "Continue"
         git -C $repo merge --no-commit --no-ff main
         $ErrorActionPreference = "Stop"
@@ -94,6 +99,8 @@ if (-not $resuming) {
         throw
     }
 } else {
+    # Reached only by way of conflicts, so main definitely brought something in.
+    $mergedNothing = $false
     $unresolved = git -C $repo diff --name-only --diff-filter=U
     if ($unresolved) {
         Write-Host "Still unresolved:"
@@ -128,5 +135,14 @@ if (-not $green) {
     exit 1
 }
 
-Write-Host "`nIntegrated and green, staged but not committed."
-Write-Host "This is review 2 -- ask the human to read it, then run tools/agent/land.ps1."
+# Review 2 exists to catch a change that was fine alone and breaks in combination.
+# With nothing merged there is no combination: the tree is byte-identical to the
+# one review 1 approved, so asking for it again buys nothing and costs a person's
+# attention. Say which happened rather than leaving the agent to guess.
+if ($mergedNothing) {
+    Write-Host "`nGreen, and main had not moved -- nothing was merged, so this tree is the one"
+    Write-Host "review 1 already approved. No second review. Run tools/agent/land.ps1."
+} else {
+    Write-Host "`nIntegrated and green, staged but not committed."
+    Write-Host "This is review 2 -- ask the human to read it, then run tools/agent/land.ps1."
+}

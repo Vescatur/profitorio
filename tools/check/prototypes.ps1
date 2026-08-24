@@ -6,9 +6,8 @@ param(
     [string]$Instance = ""
 )
 
-# The repo's own Factorio. Without -Instance the save is not beside it: the install
-# ships use-system-read-write-data-directories=true, so saves stay in %APPDATA%.
-# With one, tools/lib/instance.ps1 moves the whole write-data directory instead.
+# The repo's own Factorio. tools/lib/instance.ps1 answers where the save is:
+# inside factorio\ by default, or under .factorio\<name>\ for an -Instance.
 $repo        = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 $factorioExe = Join-Path $repo "factorio\bin\x64\factorio.exe"
 

@@ -3,8 +3,8 @@
 ## Prerequisites
 
 - **Factorio 2.1.14**, installed and copied into `factorio/` — see [Install Factorio](#1-install-factorio).
-  Every script in `tools/` launches `factorio/bin/x64/factorio.exe`, so there is nothing else to install
-  and no Steam involved
+  Every script in `tools/` launches `factorio/bin/x64/factorio.exe` and keeps its mods and saves
+  inside `factorio/`, so there is nothing else to install and no Steam involved
 - **VSCode** with [Factorio Mod Debug](https://marketplace.visualstudio.com/items?itemName=justarandomgeek.factoriomod-debug) extension (provides Lua intellisense for Factorio API)
 
 ## Initial Setup
@@ -31,14 +31,21 @@ reference cannot fall behind it either way: `factorio-docs/markdown/` is generat
 
 `expansion` is the build that includes Space Age. It bundles `space-age`, `elevated-rails`,
 `quality` and `recycler` into `factorio/data/`, and **all four must stay disabled** — the mod is base
-game only (see [Testing Changes](#testing-changes)). Check
-`%APPDATA%\Factorio\mods\mod-list.json`: `base` and `profitorio` enabled, those four not. Swap
-`expansion` for `alpha` to get the base-game-only installer instead, which ships none of them.
+game only (see [Testing Changes](#testing-changes)). `tools/setup/mod-list.json`, the seed every
+instance's mod list is copied from, already says so. Swap `expansion` for `alpha` to get the
+base-game-only installer instead, which ships none of them.
 
-Copying the folder does **not** relocate the mods folder. The installer build ships
-`use-system-read-write-data-directories=true` in `config-path.cfg`, so mods, saves and config stay in
-`%APPDATA%\Factorio` wherever the install itself sits — which is the folder `dev-mode.ps1` junctions
-into. The zip package defaults to the opposite and would put them inside `factorio/`.
+Then put the dev save in place:
+
+```powershell
+New-Item -ItemType Directory factorio\saves -Force
+Copy-Item "$env:APPDATA\Factorio\saves\dev.zip" factorio\saves\dev.zip
+```
+
+That copy is the only read of `$env:APPDATA` here, and it is you doing it. **Development never
+touches the Factorio you play**: the installer build would put mods and saves in that game's own
+directory, and `tools/lib/instance.ps1` is what keeps them in `factorio/`
+([why](architecture.md#running-several-instances-at-once)).
 
 ### 2. Enter Dev Mode
 
@@ -48,15 +55,12 @@ Run `tools/setup/dev-mode.ps1` to create a junction from the Factorio mods folde
 .\tools\setup\dev-mode.ps1
 ```
 
-This creates: `%APPDATA%\Factorio\mods\profitorio_<version>` → `./src`
+This creates: `factorio\mods\profitorio_<version>` → `./src`
 
 Changes in `src/` are immediately visible to Factorio — no copy step needed.
 
-It also deletes any `profitorio_*.zip` that `zip.py` left in the mods folder. The two scripts
-are a toggle: `zip.py` removes the junction and leaves the zip, this script removes the zip
-and puts the junction back. Only one copy of the mod is ever installed, and a folder and a zip of the
-same mod are two copies under one name — with both present the folder wins and the zip is ignored,
-which silently makes a release build untested.
+It also writes `factorio/config/config.ini` and seeds the mod list, so run it before any check. Nothing installs a built zip: to test one, copy it into `factorio/mods` and remove the
+junction first — with both present the folder wins and the zip is silently ignored.
 
 ### 3. Launch for Development
 
@@ -67,7 +71,7 @@ Run `tools/run/playtest.ps1` to start the repo's own Factorio on the dev save:
 ```
 
 This launches Factorio with:
-- `--load-game` on `%APPDATA%\Factorio\saves\dev.zip` (the dev save file)
+- `--load-game` on `factorio\saves\dev.zip` (the dev save file)
 - `--disable-audio` (faster startup)
 
 ## Project Structure
@@ -75,7 +79,8 @@ This launches Factorio with:
 The one-clause-per-file map is in [CLAUDE.md](../CLAUDE.md#project-map); the reasoning behind the
 layout is in [architecture.md](architecture.md). Two local additions this file owns:
 
-- `factorio/` — the local 2.1.14 install copied in by [Install Factorio](#1-install-factorio) (gitignored)
+- `factorio/` — the local 2.1.14 install copied in by [Install Factorio](#1-install-factorio), and
+  its own write-data directory: mods, saves, config and script-output (gitignored)
 - `.vscode/settings.json` — Lua workspace config for Factorio API intellisense
 
 ## VSCode Configuration
@@ -271,5 +276,5 @@ Two consequences worth knowing:
 - **The bump is a working-tree edit.** `src/info.json` is left at the new version — commit and tag it
   yourself. A failed upload keeps the bump rather than rolling it back, because a failure after the
   portal accepted the release is indistinguishable from one before it; retry with `--bump none`.
-- **Building uninstalls the dev junction** (see [Enter Dev Mode](#2-enter-dev-mode)). Run
-  `.\tools\setup\dev-mode.ps1` to get back to dev mode.
+- **The zip lands in the export folder and nowhere else.** Building installs nothing and leaves
+  the dev junction alone, so there is no dev mode to get back to.
