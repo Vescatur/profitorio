@@ -1,40 +1,41 @@
 ---
 name: add-customer-order
-description: Add, remove, retune or re-grade a customer order in Profitorio — the band/grade ladder in src/services/economy/customers/orders.lua. Use when asked to add a new order or customer, change what a customer wants or how many, retune a refund, profit or spawn weight, add or remove a grade from a band, or when a load fails with a verify_orders refund assertion or a spawn-row length mismatch.
+description: Add, remove, retune or reorder a customer order in Profitorio — the order ladder in src/services/economy/customers/orders.lua. Use when asked to add a new order or customer, change what a customer wants or how many, retune a refund, profit or spawn weight, change who walks in after a delivery, move an order up or down the ladder, or when a load fails with a verify_orders refund assertion or a spawn-row error naming a step, a sum or a band.
 ---
 
 # Add or change a customer order
 
 Orders live in the `orders` table in `services/economy/customers/orders.lua`, currently three per
-band across five bands. Everything else about a customer is generated from its position on that
-ladder.
+band across five bands. **The table IS the ladder** — a row's position in the array is its rung —
+and everything else about a customer is generated from that position.
 
-## The seven authored fields
+## The six authored fields
 
-Every entry needs all seven. A missing one fails the load by name rather than taking a default.
+Every entry needs all six. A missing one fails the load by name rather than taking a default.
 
-- **`band` / `grade`** — where it sits on the ladder. `band` indexes the `bands` table (1 = penny),
-  `grade` counts up from 1 (easiest). A band may hold **any number of grades** as long as they run
-  1..N with no gaps; nothing in the code assumes three.
+- **`band`** — which denomination this order deals in; indexes the `bands` table (1 = penny). It
+  does not place the order on the ladder, only names its currency, licence and payout icon. A band's
+  rows must **sit together and climb by one**, which the load asserts.
 - **`item`** — the vanilla item ordered. Finished goods only: never ore, plates, gears or circuits.
 - **`amount`** — how many to deliver.
 - **`refund`** — a map of denomination key to amount, e.g. `{ penny = 48, silver_coin = 2 }`. Must
   cover the **full embedded cost** of `amount × item`, tolls included.
 - **`profit`** — a plain number, paid in the band's own currency. A design knob like `spawn`, not a
   consequence of the refund: nothing enforces it.
-- **`spawn`** — who walks in when this order is served, as whole percent **indexed by grade**:
-  `spawn[g]` is the chance of a grade-`g` customer of the same band, plus the named key `up` for the
-  drip to the band above. One number per grade the band has, `0` included, summing to `weight_total`
-  (100).
+- **`spawn`** — who walks in when this order is served, as whole percent over steps **relative to
+  this rung**: `same`, `up1`..`up9` and `down1`..`down9`. A missing key is 0, and the row must sum
+  to `weight_total` (100). A step off either end of the ladder fails the load unless its weight is
+  `0`, so a full nineteen-key template can be pasted into every row.
 
 ## What is generated — do not hand-write it
 
-- **The successor list and the band's licence**, from `band` and `grade`.
-- **`is_top`** — whether this is the band's highest grade. **The band's top grade is its bridge
-  upward** and is what pays a coin of the next denomination. Ask `order.is_top`; never write
-  `grade == 3`.
+- **The successor list**, by resolving each step to the order standing on that rung, and **the
+  band's licence**, from `band`.
+- **`is_top`** — whether this is the last row of its band. **A band's last row is its bridge
+  upward** and is what pays a coin of the next denomination. Ask `order.is_top`; never work the
+  position out yourself.
 - **The spoil target** — every customer alike leaves a `customer_review`, because the five minutes
-  are its whole life and there is no lower grade to step down into.
+  are its whole life and there is no lower rung to step down into.
 - **The timer** — every customer item takes `total_life_seconds`, the one clock the ladder runs on,
   because a successor inherits a *percentage* of the timer it replaces and a second timer could only
   contradict the first. Retuning the life is a one-number edit at the top of the file.
@@ -60,10 +61,10 @@ denomination** at all — nothing on the robot path pays a Bond toll — so a fi
 1. Giving those bands a real margin means either typing a bigger number here or tolling something in
 their recipe tree, which is the choice that ladder is still waiting on.
 
-## Adding or removing a grade
+## Inserting, removing or moving a row
 
-**Every `spawn` row in that band changes length.** A stale row fails the load naming the order, the
-band and both lengths, so this cannot rot silently — but it is a whole-band edit, not a one-row one.
+Every row after it shifts one rung, so every step that pointed across it now points somewhere else.
+Re-read the `spawn` rows on both sides of where you cut, and the neighbours within nine rungs of it.
 
 ## Names come from the module
 
@@ -89,7 +90,7 @@ These are in CLAUDE.md as hard rules, repeated here because this is where they a
 - **Spawn weights are integers, never decimals.** `0.1 + 0.2 + 0.7` is `1.0000000000000002` in IEEE
   doubles: it fails the sum assertion, and leaves a one-ULP gap between two `shared_probability`
   bands where a delivery emits no successor and silently drains the population. A `0` is fine and
-  means "never spawn this grade".
+  means "never take this step".
 - **Finished goods only** — never ore, plates, gears or circuits.
 
 ## Validate

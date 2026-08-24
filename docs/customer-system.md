@@ -19,10 +19,10 @@ has a source: five bands of customers, one per denomination, and the rocket for 
 
 ## The ladder
 
-Orders are grouped into five **bands**, one per denomination, currently of three **grades** each —
-easy, medium and hard. Nothing in the code assumes three: a band may hold any number of grades, and
-its top one is derived rather than written down. A band's orders are the finished goods that era of
-the factory can build, and serving one pays profit in that band's own currency.
+Every order sits on one flat **ladder**, easiest first; its rung is its position in the table. Each
+order carries a **band** too, one per denomination — a band's orders are the finished goods that era
+of the factory can build, and serving one pays profit in that band's own currency. A band's orders
+sit together and it may hold any number; its last is derived rather than written down.
 
 | Band | Licence | Pays |
 | --- | --- | --- |
@@ -39,11 +39,11 @@ taxing it.
 
 ### Climbing
 
-Only the **top** order of a band bridges upward, paying a little of the next denomination on top of
-its own profit. That drip is the only route up the ladder, and it is load-bearing rather than
-flavour: copper is priced in Silver, the `electronics` trigger wants ten copper plates, a lab needs
-circuits, and every technology needs a lab. Remove the drip and a new game cannot research anything,
-ever.
+Only the **last** order of a band bridges upward in coin, paying a little of the next denomination
+on top of its own profit. That drip is load-bearing rather than flavour: copper is priced in Silver,
+the `electronics` trigger wants ten copper plates, a lab needs circuits, and every technology needs
+a lab. Remove the drip and a new game cannot research anything, ever. Which customer walks in next
+is a separate question — see [Spawn weights](#spawn-weights).
 
 ### Licences
 
@@ -109,7 +109,7 @@ A customer's timer is its whole life, and **nothing refreshes it**:
 - **Delivering does not reset it.** A delivery's successor carries no `always_fresh`, and a Factorio
   product inherits the spoil percentage of its spoilable ingredients by default. The successor is
   born as far through its life as the customer it replaced.
-- **Running out ends the customer.** There is no walk down the grades: `spoil_result` is the review,
+- **Running out ends the customer.** There is no walk down the ladder: `spoil_result` is the review,
   for every order alike.
 
 ```
@@ -147,8 +147,8 @@ most valuable customer in the game. They have no delivery recipe. Instead, `cust
 it, and the launch pays vanilla's `rocket_launch_products`, 1000 Diamonds.
 
 They run the same five minutes as anyone else, and inherit whatever was left of the customer that
-brought them in, so the satellite chain has to be buffered and ready before one arrives. They enter the population only as a successor of the gold band's hard
-order.
+brought them in, so the satellite chain has to be buffered and ready before one arrives. They stand
+on the rung above the last order, reached today only by the gold band's last.
 
 ### 3. Delivery recipes
 
@@ -297,9 +297,11 @@ roughly one level of.
 
 ## Spawn weights
 
-When a customer is served, a new customer spawns based on `shared_probability` ranges. Each order
-declares its successors as **integer weights** over a fixed total, and the assertion at load compares
-integers.
+When a customer is served, a new customer spawns based on `shared_probability` ranges. An order does
+not name its successors: it names **steps relative to its own rung** — `same`, `up1`..`up9`,
+`down1`..`down9` — and each resolves to whichever order stands there. Steps cross band boundaries
+freely, so any order may reach into the band above or fall back below. A missing key is zero, and
+the weights are **integers** over a fixed total, which is what the assertion at load compares.
 
 That is not a nicety. A decimal three-way split does not sum to 1.0 in IEEE doubles — `0.1 + 0.2 +
 0.7` is `1.0000000000000002` — which trips the assertion outright, and worse, leaves a one-ULP gap
@@ -307,12 +309,11 @@ between two `shared_probability` bands where a delivery produces no successor at
 drains the population. Integers cannot do that: band *k+1*'s `min` is built from the same numerator
 as band *k*'s `max`.
 
-The successor *list* is generated from each order's position on the ladder; the weights along it are
-authored per order, because who walks in next is a design choice rather than a consequence of
-position. Serving is the only way up: an order mostly brings more
-work at its own level, and only the top order of a band can bring in a customer from the band above.
-Since a successor inherits the leftover time, a climb has to happen inside one customer's five
-minutes. Weights are clamped by folding rather than dropping, so every row sums exactly.
+Serving is the only way up, and since a successor inherits the leftover time, a climb has to happen
+inside one customer's five minutes. A step off either end of the ladder is a load error unless its
+weight is zero — a zero is dropped before it resolves, which is what lets the same nineteen-key
+template be pasted into every row. The rung above the last order is the
+[rocket client](#2c-the-rocket-client), where the ladder stops.
 
 ## Key Factorio 2.1 features used
 

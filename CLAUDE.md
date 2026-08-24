@@ -44,7 +44,7 @@ it is: [architecture](docs/architecture.md).
 - **Money is earned, never printed** — the science pack recipes are deleted, not hidden: red and
   green are craftable from purchased plates and would print money. Never restore a recipe producing a
   currency item. The one exception is exchange, **down the ladder only**: a coin breaks into smaller
-  ones, never the reverse, or the factory mints the coin gating the next tier of research
+  ones, never the reverse, or the factory mints the coin gating the next research tier
 - **A customer's five minutes never reset** — `orders.lua` gives every customer item one
   `total_life_seconds` timer, and a delivery's successor carries **no `always_fresh`** so it inherits
   the spoil percentage of the customer it replaced. That absence is the whole rule: re-adding the
@@ -64,12 +64,12 @@ it is: [architecture](docs/architecture.md).
   refreshes a customer's five minutes, so the population settles at the arrival rate times that
   life, and the review pile grows at the arrival rate too. A satellite launch is the one other place
   a customer leaves the population: it consumes its Diamond client and emits no successor
-- **Customer spawn weights are integers, never decimals** — each order's `spawn` row must sum to
-  `weight_total`, and there's a load assertion. Decimals are the trap: `0.1 + 0.2 + 0.7` is
-  `1.0000000000000002` in IEEE doubles, which fails the assertion outright and, worse, leaves a
-  one-ULP gap between two `shared_probability` bands where a delivery emits no successor and
-  silently drains the population. A `0` is fine and means "never spawn this grade" — it is dropped
-  rather than emitted as a zero-width slice
+- **Customer spawn weights are integers, never decimals** — an order's `spawn` row is whole percent
+  over relative ladder steps summing to `weight_total`; there's a load assertion. Decimals
+  are the trap: `0.1 + 0.2 + 0.7` is `1.0000000000000002` in IEEE doubles, which fails the assertion
+  outright and, worse, leaves a one-ULP gap between two `shared_probability` bands where a delivery
+  emits no successor and silently drains the population. A `0` means "never take this step" and is
+  dropped rather than emitted as a zero-width slice
 - **One `script.on_event` call per event, ever** — a second registration for the same event
   *replaces* the first and raises no error, so the concern registered earlier just stops working.
   `src/control.lua` is the only place that calls `script.on_event`: runtime modules export a handler

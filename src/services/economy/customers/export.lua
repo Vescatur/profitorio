@@ -185,11 +185,12 @@ for _, order in ipairs(customers.orders) do
             icons = icons,
             categories = { "export" },
             energy_required = 0.1,
+            overload_multiplier = 1,
             subgroup = "customer-deliver",
-            -- Zero-padded so the GUI still sorts a band with ten or more grades:
-            -- these strings compare as text, and "10" sorts before "2".
+            -- Zero-padded so the GUI still sorts a ladder of ten rungs or more: these
+            -- strings compare as text, and "10" sorts before "2".
             order = string.char(string.byte("a") + order.band - 1)
-                .. string.format("%02d", order.grade) .. "[" .. order.item .. "]",
+                .. string.format("%02d", order.index) .. "[" .. order.item .. "]",
         }
     })
 

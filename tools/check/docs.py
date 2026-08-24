@@ -72,7 +72,12 @@ BUDGETS = {
     # a tools/ script, not after being pointed at a doc.
     "CLAUDE.md": 3260,
     "docs/architecture.md": 2000,
-    "docs/customer-system.md": 3000,
+    # Raised once, from 3000, when spawn config moved from per-band grade indexes to
+    # relative ladder steps. "Spawn weights" now has to carry a key vocabulary that did
+    # not exist before (`same`, `up1`..`up9`, `down1`..`down9`) and say what happens at
+    # the ends of the ladder. The surrounding prose was tightened to pay for most of it;
+    # read on demand rather than every turn, so this guards sprawl, not token cost.
+    "docs/customer-system.md": 3050,
     # Grew on purpose: it gained an install procedure and a fourth check. Unlike
     # CLAUDE.md this is read on demand, so its budget guards sprawl, not token cost.
     "docs/dev-setup.md": 2000,
