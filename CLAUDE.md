@@ -134,6 +134,35 @@ it is: [architecture](docs/architecture.md).
   Never disable a rule file-wide or workspace-wide.
   [More](docs/dev-setup.md#the-problems-panel-must-stay-empty)
 
+## Working in parallel
+
+Several Claude sessions work this repo at once. Each is a peer that merges its own work; there is
+no coordinator, so the rules below are the only thing keeping them from colliding.
+
+**Never work in the primary worktree** — it holds `main`, and the human plays there.
+`tools/agent/start.ps1 -Task <name>` gives you a worktree beside the repo, a branch `agent/<name>`
+and a Factorio instance. Every `tools/` call you make from then on carries `-Instance <name>`
+(`--instance` for the Python ones), or you collide with another agent on Factorio's lock file.
+
+1. Do the work. **Leave it uncommitted**, run the three checks, and ask for review.
+2. Rework until approved. Then `tools/agent/integrate.ps1 -Message "<terse one-liner>"` — it
+   commits, pulls `main` in and re-runs the checks.
+3. Ask for review again: the integrated tree, still uncommitted. This is where a change that was
+   fine alone but breaks in combination shows up.
+4. `tools/agent/land.ps1`, then `cd` to the primary and `tools/agent/finish.ps1 -Task <name>`.
+
+- **Two review gates, both on uncommitted code.** Nothing reaches `main` the human has not read.
+  Never commit past a gate to make progress.
+- **Resolve your own conflicts, in your own worktree.** Never in the primary one.
+- **If the primary worktree is dirty, stop and say so.** Never stash, commit or revert work that
+  is not yours. Both scripts refuse on their own; do not work around them.
+- **On failure, leave everything in place.** The worktree is the evidence. Cleanup is for success.
+- **Never hold the merge lock across a review** — it stalls every other agent. The scripts release
+  it for you.
+- **Do not push.** `main` stays local; the human publishes.
+
+Mechanics, exit codes and the junction hazard: `tools/agent/README.md`.
+
 ## Project map
 
 One clause per file. The reasoning is in [docs/architecture.md](docs/architecture.md).

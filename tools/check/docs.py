@@ -58,7 +58,13 @@ BUDGETS = {
     # ~1600 of this is the Rules block, which is verbatim engine constraints and does
     # not compress -- the tunable headroom is the other ~1300. Trimmed twice to get
     # here; the next section that wants in should displace one, not raise this.
-    "CLAUDE.md": 2900,
+    #
+    # Raised once, from 2900, for "Working in parallel". Deliberately not a pointer
+    # to a doc: every agent in a parallel session must read that section before it
+    # touches anything, so an external file would be loaded on every turn too --
+    # the same cost, plus a hop. The four tools/agent/ scripts are what keep it to
+    # a few hundred words instead of twenty git invocations.
+    "CLAUDE.md": 3200,
     "docs/architecture.md": 2000,
     "docs/customer-system.md": 3000,
     # Grew on purpose: it gained an install procedure and a fourth check. Unlike

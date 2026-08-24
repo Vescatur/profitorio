@@ -6,6 +6,7 @@ ships in the mod.
 | Folder | Reach for it when |
 | --- | --- |
 | `setup/` | Setting up a machine, or getting back to dev mode after a release build |
+| `agent/` | You are one of several Claude sessions working the repo at once |
 | `lib/` | Shared by the other folders; nothing here is a job you run |
 | `run/` | You want to play the mod |
 | `check/` | You changed something and want to know whether it still works |

@@ -14,38 +14,36 @@
       "PowerShell(Get-ChildItem *)",
       "PowerShell(Get-Process *)",
       "PowerShell(Get-CimInstance *)",
-      "Bash(\"/c/Program Files \\(x86\\)/Steam/steamapps/common/Factorio/bin/x64/factorio.exe\" *)",
-      "Read(//c/Program Files \\\\\\(x86\\\\\\)/Steam/steamapps/common/Factorio/**)",
       "WebFetch(domain:mods.factorio.com)",
       "WebFetch(domain:lua-api.factorio.com)",
       "WebFetch(domain:wiki.factorio.com)",
       "WebFetch(domain:forums.factorio.com)",
       "WebFetch(domain:www.reddit.com)",
       "Skill(update-config)",
-      "Read(//c/Users/Ivan/AppData/Local/Temp/claude/C--Users-Ivan-Documents-Develop-factorio-profitorio/2501cc34-5026-4138-bc28-af4ce064c879/scratchpad/**)",
       "Bash(cp \"/c/Users/Ivan/AppData/Roaming/Factorio/script-output/data-raw-dump.json\" .)",
       "PowerShell(New-Item *)",
       "Bash(cd *)",
-      "Bash(awk '/^## Technologies/,/^### Keep/' docs/prototype-audit.md)",
       "Bash(python audit3.py)",
-      "Bash(cp audit3.md /c/Users/Ivan/Documents/Develop/factorio/profitorio/docs/prototype-audit.md)",
-      "Bash(awk '/^### Empty gate/,0' docs/prototype-audit.md)",
       "Bash(grep -oP '^\\\\| `\\\\K[^`]+')",
       "Bash(python -c ' *)",
-      "PowerShell(Get-Item *)"
+      "PowerShell(Get-Item *)",
+      "Read(../profitorio-agents/**)",
+      "Edit(../profitorio-agents/**)",
+      "Write(../profitorio-agents/**)"
     ],
     "defaultMode": "auto"
   },
   "autoMode": {
     "allow": [
       "$defaults",
-      "Reading anything under the Steam Factorio install, factorio-data/, or factorio-docs/",
-      "Running this project's tooling under tools/ — setup/ (dev-mode junction), run/ (playtest), check/ (prototypes, translations, probe, player), generate/ (icons, api_docs), release/ (zip, publish)",
+      "Reading anything under factorio/, factorio-data/, or factorio-docs/",
+      "Running this project's tooling under tools/ \u2014 setup/ (dev-mode junction), run/ (playtest), check/ (prototypes, translations, probe, player), generate/ (icons, api_docs), release/ (zip, publish)",
       "Launching factorio.exe for headless validation or --dump-data",
       "Read-only shell inspection: Get-*, Measure-Object, Test-Path pipelines, and parsing the JSON under %APPDATA%/Factorio/script-output",
       "Deleting or regenerating build output: src/graphics/icons, tools/profitorio_*.zip, factorio-docs/html, and the scratchpad directory",
       "Fetching Factorio documentation and mod-portal pages",
-      "Local git operations in this repository: status, diff, log, add, commit, branch, checkout"
+      "Local git operations in this repository: status, diff, log, add, commit, branch, checkout, merge, rebase, stash, worktree, and push",
+      "Creating and removing agent worktrees under ../profitorio-agents/ and the sibling profitorio.code-workspace file"
     ]
   }
 }
