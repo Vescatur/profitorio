@@ -47,7 +47,7 @@ STATE = Path(__file__).resolve().parent / ".verify" / "rcon.json"
 def state_for(instance=None):
     """Where probe.ps1 wrote this instance's connection details.
 
-    Mirrors tools/lib/instance.ps1. None means the shared install, whose state
+    Mirrors tools/lib/instance.ps1. None means the standalone install, whose state
     lives beside this script rather than under .factorio/.
     """
     if not instance:

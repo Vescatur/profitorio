@@ -64,7 +64,13 @@ BUDGETS = {
     # touches anything, so an external file would be loaded on every turn too --
     # the same cost, plus a hop. The four tools/agent/ scripts are what keep it to
     # a few hundred words instead of twenty git invocations.
-    "CLAUDE.md": 3200,
+    #
+    # Raised again, from 3200, for the working agreement that development never
+    # touches the Factorio the human plays. Same argument: it guards the one thing
+    # in reach that is outside the repo, the old tooling defaulted to violating it,
+    # and every failure mode is silent -- so an agent has to know it before it edits
+    # a tools/ script, not after being pointed at a doc.
+    "CLAUDE.md": 3260,
     "docs/architecture.md": 2000,
     "docs/customer-system.md": 3000,
     # Grew on purpose: it gained an install procedure and a fourth check. Unlike

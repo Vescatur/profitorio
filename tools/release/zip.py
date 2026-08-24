@@ -1,7 +1,5 @@
 import hashlib
 import json
-import os
-import shutil
 import zipfile
 from pathlib import Path
 
@@ -66,30 +64,8 @@ def assert_lf_only(entries):
     )
 
 
-def remove_dev_link(mods_dir: Path, name: str) -> None:
-    """Delete the junction tools/setup/dev-mode.ps1 leaves in the mods folder.
-
-    A folder and a zip of the same mod are two copies under one name, and the
-    folder wins: leave the junction there and Factorio ignores the zip, so the
-    release you are about to publish is never the thing that got loaded.
-
-    os.rmdir, never shutil.rmtree -- the junction points at src/, and rmtree
-    follows it and deletes the working tree. A broken junction has no target to
-    stat, so link-ness is checked before anything asks whether it is a directory.
-    """
-    for path in mods_dir.glob(f"{name}_*"):
-        if not (path.is_symlink() or os.path.isjunction(path)):
-            if path.is_dir():
-                print(f"Warning: {path.name} is a real folder, not a link -- "
-                      "Factorio will load it instead of the zip")
-            continue
-
-        os.rmdir(path)
-        print(f"Removed dev link from mods folder: {path.name}")
-
-
 def create_release_zip():
-    """Create a zip, copy it into the mods folder, and drop the dev junction there."""
+    """Build the reproducible release zip into export/, and nowhere else."""
     base_dir = Path(__file__).resolve().parents[2]
     src_dir = base_dir / "src"
     export_dir = base_dir / "export"
@@ -113,8 +89,7 @@ def create_release_zip():
         if p.is_file()
     )
 
-    # Before the archive is opened, so a rejected build leaves no zip behind and
-    # never reaches the mods folder.
+    # Before the archive is opened, so a rejected build leaves no zip behind.
     assert_lf_only(entries)
 
     with zipfile.ZipFile(
@@ -132,20 +107,14 @@ def create_release_zip():
 
     digest = hashlib.sha256(zip_path.read_bytes()).hexdigest()
 
-    appdata = Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming"))
-    mods_dir = appdata / "Factorio" / "mods"
-    mods_dir.mkdir(parents=True, exist_ok=True)
-
-    target_path = mods_dir / zip_filename
-    shutil.copy2(zip_path, target_path)
-    remove_dev_link(mods_dir, name)
-
+    # export/ is the only destination, deliberately: nothing here installs the
+    # build. A mods folder that would accept one belongs to a Factorio somebody
+    # plays, so a build landing there swaps the mod under a running game.
     print(f"Successfully created {zip_filename} at {zip_path}")
-    print(f"Copied to Factorio mods folder: {target_path}")
     # Two machines on the same commit must print the same digest. If they do
     # not, the working trees differ -- check `git ls-files --eol` first.
     print(f"sha256: {digest}")
-    return str(target_path)
+    return str(zip_path)
 
 
 if __name__ == "__main__":

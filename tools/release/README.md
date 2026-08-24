@@ -1,7 +1,8 @@
 # release/
 
-- `zip.py` — builds the reproducible zip into `export/` and installs it in the mods folder in
-  place of the dev junction. `setup/dev-mode.ps1` is how you undo that.
+- `zip.py` — builds the reproducible zip into `export/`, and nowhere else. It installs nothing:
+  a mods folder that would accept the build belongs to a Factorio somebody plays. To test a
+  release build, copy it into `factorio/mods` yourself and remove the dev junction first.
 - `publish.py` — the whole release in one command: bumps the version in `src/info.json`, calls
   `zip.py`, uploads. Reads its API key from `../.secrets/mod-portal-api-key`.
 

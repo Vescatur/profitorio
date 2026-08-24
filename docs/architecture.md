@@ -149,10 +149,9 @@ The Profitorio tab and its subgroup ordering. Deliberately not distributed into 
 
 ## Running several instances at once
 
-Factorio admits one process per write-data directory, and the installer build points every launch
-at `%APPDATA%\Factorio`. That one `.lock` file is why the checks were serial: a running
-`probe.ps1` made `prototypes.ps1` fail with `Couldn't create lock file`, which reads exactly like a
-mod error.
+Factorio admits one process per write-data directory. That one `.lock` file is why the checks were
+serial: a running `probe.ps1` made `prototypes.ps1` fail with `Couldn't create lock file`, which
+reads exactly like a mod error.
 
 `tools/lib/instance.ps1` breaks the tie. Given `-Instance <name>` it writes a `config.ini` whose
 `[path] write-data` is `.factorio/<name>/data`, and hands the launcher a `--config` argument.
@@ -160,9 +159,22 @@ Everything mutable follows the write-data directory — the lock, the mods folde
 `script-output`, the log — so instances neither see nor block each other. The 4.3 GB `read-data`
 stays shared, which is why an instance costs about 3.5 MB rather than a copy of the install.
 
-Two shapes here are deliberate. **No `-Instance` means the shared install and today's behaviour**,
-because that is the human's game and their saves; agents move off it, the player never does. And
-**the instance name is authored, not derived** — a name maps to a directory, so a stray one is
+Three shapes here are deliberate.
+
+**The default is an instance too, not a passthrough.** It resolves to `factorio/` — write-data at
+the install root beside `factorio/data`, which is Factorio's own portable layout — and it
+carries a `--config` like any other. The installer build this repo copies in ships
+`use-system-read-write-data-directories=true`, which sends mods, saves and `script-output` to
+`%APPDATA%\Factorio` however far from Program Files the copy sits. That is the directory the
+Factorio you *play* uses, so the old default junctioned the mod under development into a live game
+and dumped prototype JSON beside real saves. Development stays inside the repo instead, reads
+included: an instance seeds from `factorio/` and from a committed `tools/setup/mod-list.json`, never
+from the system directory. `Set-PortableInstall` pins `config-path.cfg` for the one launch a
+`--config` cannot reach — double-clicking `factorio.exe`.
+
+**Playing still means no `-Instance`.** Agents move off the dev save; the player never does.
+
+**The instance name is authored, not derived** — a name maps to a directory, so a stray one is
 visible on disk and removable, where an index derived from a worktree or a PID would be neither.
 
 Ports are the part write-data does not cover: `--start-server` binds UDP 34197 unless told

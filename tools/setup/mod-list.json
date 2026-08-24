@@ -1,0 +1,10 @@
+{
+  "mods": [
+    { "name": "base", "enabled": true },
+    { "name": "elevated-rails", "enabled": false },
+    { "name": "quality", "enabled": false },
+    { "name": "recycler", "enabled": false },
+    { "name": "space-age", "enabled": false },
+    { "name": "profitorio", "enabled": true }
+  ]
+}

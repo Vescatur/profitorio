@@ -52,27 +52,31 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
 MOD_NAME = "profitorio"
-# The repo's own Factorio. Its script-output is not beside it: the install ships
-# use-system-read-write-data-directories=true, so the dumps land in %APPDATA%.
 DEFAULT_FACTORIO = str(REPO / "factorio" / "bin" / "x64" / "factorio.exe")
 REFERENCE_LANGUAGE = "en"
 
 
-def instance_paths(name: str | None) -> dict[str, Path] | None:
-    """Where one instance keeps its state. None means the shared install.
+def instance_paths(name: str | None) -> dict[str, Path]:
+    """Where one instance keeps its state. No name means the standalone install.
 
-    Mirrors tools/lib/instance.ps1; tools/setup/dev-mode.ps1 -Instance is what
-    creates the directory this points at.
+    Mirrors tools/lib/instance.ps1, including that the default is an instance like
+    any other rather than a passthrough -- it too gets a config, so every dump
+    carries --config and none of them can land in the Steam install's
+    script-output. tools/setup/dev-mode.ps1 is what creates the directory.
     """
     if not name:
-        return None
-    root = REPO / ".factorio" / name
-    if not (root / "config.ini").is_file():
-        raise CheckError(
-            f"No instance '{name}' at {root}. "
-            f"Create it with: powershell tools/setup/dev-mode.ps1 -Instance {name}"
-        )
-    return {"config": root / "config.ini", "user_data": root / "data", "cache": root / "locale-cache"}
+        root = REPO / "factorio"
+        paths = {"config": root / "config" / "config.ini", "user_data": root,
+                 "cache": root / "locale-cache"}
+        hint = "powershell tools/setup/dev-mode.ps1"
+    else:
+        root = REPO / ".factorio" / name
+        paths = {"config": root / "config.ini", "user_data": root / "data",
+                 "cache": root / "locale-cache"}
+        hint = f"powershell tools/setup/dev-mode.ps1 -Instance {name}"
+    if not paths["config"].is_file():
+        raise CheckError(f"No Factorio config at {paths['config']}. Create it with: {hint}")
+    return paths
 
 # Locale dump file -> the prototype base class whose descendants it covers.
 # Every data.raw type is walked up its "Inherits from" chain (read out of
@@ -205,9 +209,9 @@ def dump_everything(exe: Path, user_data: Path, mod_dir: Path | None, cache: Pat
                     config: Path | None = None) -> None:
     script_output = user_data / "script-output"
     mod_args = ["--mod-directory", str(mod_dir)] if mod_dir else []
-    # Prefixed to every run, not just the modded ones: --config is what moves
-    # script-output, so a baseline dumped without it lands in %APPDATA% and
-    # collect() then reads whatever another instance left there.
+    # Prefixed to every run, not just the modded ones: --config is what places
+    # script-output, so a baseline dumped without it lands wherever
+    # config-path.cfg points and collect() then reads whatever is already there.
     base_args = ["--config", str(config)] if config else []
 
     print("Dumping base-only prototypes (baseline)...")
@@ -570,7 +574,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--factorio", default=os.environ.get("FACTORIO_EXE", DEFAULT_FACTORIO),
                         help="path to factorio.exe")
-    parser.add_argument("--user-data-dir", default=os.path.expandvars(r"%APPDATA%\Factorio"),
+    parser.add_argument("--user-data-dir", default=str(REPO / "factorio"),
                         help="Factorio user data directory (holds script-output)")
     parser.add_argument("--mod-directory", default=None,
                         help="mod directory to load the mod from (default: Factorio's own)")
@@ -586,18 +590,18 @@ def main() -> int:
                         help="list the descriptions INTENTIONALLY_UNDESCRIBED filters out")
     parser.add_argument("--json", action="store_true", help="print the report as JSON")
     parser.add_argument("--instance", default=None,
-                        help="run against .factorio/<name>/ instead of the shared install")
+                        help="run against .factorio/<name>/ instead of the standalone install")
     args = parser.parse_args()
 
     try:
         instance = instance_paths(args.instance)
-        config = instance["config"] if instance else None
+        config = instance["config"]
         # The default cache is one fixed directory under the system temp dir, so
         # two concurrent runs overwrite each other's dumps and each reports on
         # half the other's prototypes. Per-instance runs get their own.
-        if instance and parser.get_default("cache") == args.cache:
+        if parser.get_default("cache") == args.cache:
             args.cache = str(instance["cache"])
-        if instance and parser.get_default("user_data_dir") == args.user_data_dir:
+        if parser.get_default("user_data_dir") == args.user_data_dir:
             args.user_data_dir = str(instance["user_data"])
 
         cache = Path(args.cache)

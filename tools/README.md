@@ -19,5 +19,5 @@ key) and `check/.verify/` (a running probe server's connection details).
 
 Every script that launches Factorio also takes `-Instance <name>`, which moves that run's whole
 write-data directory — lock file included — into a gitignored `.factorio/<name>/` at the repo
-root, so several can run at once. Omit it and you get the shared `%APPDATA%\Factorio` install
-exactly as before. See [architecture](../docs/architecture.md).
+root, so several can run at once. Omit it and the write-data directory is `factorio/` itself.
+Either way nothing reaches the Factorio you play. See [architecture](../docs/architecture.md).

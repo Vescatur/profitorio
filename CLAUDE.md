@@ -112,6 +112,10 @@ it is: [architecture](docs/architecture.md).
 
 ### Working agreements
 
+- **Development never touches the Factorio you play** — `%APPDATA%\Factorio` is the human's Steam
+  install. Everything mutable lives in `factorio/` or `.factorio/<name>/`, seeds included. Junction
+  a mod, install a build or dump prototypes into the system directory and nothing errors; you have
+  silently edited a game somebody plays
 - **Tuning happens in config, not code** — see [below](#tuning-happens-in-config-not-code)
 - **Comments say what the code cannot** — see [below](#comments)
 - **Always validate after changes** — `python tools\check\docs.py` first (no Factorio needed),
@@ -188,7 +192,7 @@ One clause per file. The reasoning is in [docs/architecture.md](docs/architectur
 - `services/removals/` — `ore`, `electricity`, `enemies`, `military`, `uranium`
 - `services/interface/item_groups.lua` — the Profitorio tab and its subgroup ordering
 - `art/icons/` — SVG sources. **Edit these, not the generated `src/graphics/icons/` PNGs**
-- `factorio/` — the 2.1.14 install every script launches (gitignored); `docs/dev-setup.md` has the steps
+- `factorio/` — the 2.1.14 install every script launches, and its write-data (gitignored)
 - `tools/` — dev scripts by purpose; every folder carries a README
 
 ## Money
@@ -305,7 +309,7 @@ Regenerate after a Factorio update with `python tools/generate/api_docs.py --cle
 Full steps in [docs/dev-setup.md](docs/dev-setup.md). Quick start:
 
 1. Install Factorio 2.1.14 into `factorio/` — see [Install Factorio](docs/dev-setup.md#1-install-factorio)
-2. `.\tools\setup\dev-mode.ps1` — symlink `src/` into Factorio mods
+2. `.\tools\setup\dev-mode.ps1` — symlink `src/` into `factorio/mods`, and write the config
 3. `.\tools\run\playtest.ps1` — launch with the dev save
 
 ## Further reading

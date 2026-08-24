@@ -1,13 +1,11 @@
 # Launch the repo's own Factorio on the dev save.
 #
-# Mods and saves are NOT inside factorio/: the install ships
-# use-system-read-write-data-directories=true in config-path.cfg, so they stay in
-# %APPDATA%\Factorio wherever the install itself sits -- which is the folder
-# tools/setup/dev-mode.ps1 junctions src/ into. Every script here follows suit.
+# Mods and saves live inside factorio/ beside the executable -- the portable
+# layout tools/lib/instance.ps1 pins, so nothing here reaches the Steam install.
 #
 # -Instance moves all of that into .factorio/<name>/ instead. Playing without it
-# is the right default: this is the human's game, and an agent holding the shared
-# lock file is exactly what instances exist to prevent.
+# is the right default: this is the human's game, and an agent holding its lock
+# file is exactly what instances exist to prevent.
 
 param(
     [string]$Instance = ""

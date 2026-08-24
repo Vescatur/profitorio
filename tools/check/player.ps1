@@ -38,9 +38,6 @@ param(
 # The repo's own Factorio, and it has to be the non-Steam build: launch a Steam
 # copy directly and it raises a confirmation dialog no script can answer, after
 # which the run reports "Scenario ... not found" for a directory plainly on disk.
-# Without -Instance, scenarios and script-output are not beside the executable --
-# the install ships use-system-read-write-data-directories=true, so they stay in
-# %APPDATA%.
 $repo         = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 $factorioExe  = Join-Path $repo "factorio\bin\x64\factorio.exe"
 
