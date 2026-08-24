@@ -17,6 +17,10 @@ because there is no way to tell one from a `--` inside a string.
 Connection details come from the state file `tools/check/probe.ps1` writes, so
 neither has to be told the port twice.
 
+Prefer stdin over --command from Git Bash. MSYS rewrites any argument that starts
+with a "/" into a Windows path, and a console command answered by Factorio as
+unknown comes back empty rather than as an error -- see assert_console_line.
+
 Usage:
     powershell tools/check/probe.ps1 -Action start
     echo '/silent-command rcon.print(game.tick)' | python tools/check/probe_client.py
@@ -104,6 +108,36 @@ class Rcon:
         return chunks
 
 
+def assert_console_line(command):
+    """Catch a --command that Git Bash turned into a path on the way in.
+
+    MSYS treats any argument beginning with "/" as a POSIX path and expands it
+    against the Git install root, so
+
+        --command '/silent-command rcon.print("x")'
+
+    arrives here as 'C:/Program Files/Git/silent-command rcon.print("x")'.
+    Factorio answers an unknown command with an empty body, so the probe prints
+    nothing and reads as "the feature is broken" rather than "the call was
+    mangled" -- which is exactly the kind of failure this repo refuses to ship.
+
+    Measured: it fires for every argument starting with "/", `/help` included. An
+    embedded single quote happens to suppress the conversion, which is what makes
+    it look intermittent rather than total.
+
+    Only --command is checked. Blocks read from stdin are never touched by MSYS,
+    and templates/probe.lua opens with a `--` comment rather than a slash.
+    """
+    if command.startswith("/"):
+        return
+    raise RconError(
+        f"--command must start with '/', got {command!r}. "
+        "If that looks like a Windows path, Git Bash converted it on the way in. "
+        "Pipe the command in on stdin instead, or prefix the call with "
+        "MSYS2_ARG_CONV_EXCL='*'."
+    )
+
+
 def load_state(path=STATE):
     if not path.exists():
         raise RconError(f"No server state at {path}. Run tools/check/probe.ps1 -Action start first.")
@@ -162,6 +196,13 @@ def main():
                         help="run this instead of reading stdin; repeatable")
     arguments = parser.parse_args()
     state = arguments.state or state_for(arguments.instance)
+
+    try:
+        for command in arguments.command:
+            assert_console_line(command)
+    except RconError as error:
+        print(error, file=sys.stderr)
+        return 2
 
     try:
         rcon = connect(arguments.host, arguments.port, arguments.password, state)
