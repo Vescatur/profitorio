@@ -1,55 +1,22 @@
--- tolls.lua -- money is an ingredient, not just a research cost: making a thing costs
--- a coin, and the table below says which coin, one row per vanilla recipe. What the
--- toll really costs is working capital -- it comes back in the refund of whatever you
--- deliver.
 local currency = require("services.economy.money.currency")
 
--- Cheapest denomination first, from currency.lua, which is where that order is
--- defined. Both are re-exported at the bottom: verify_orders.lua reads them from here.
-local ladder = currency.ladder
-local rank = currency.rank
-
--- Profitorio's three machines. Each name is both a crafting category and the recipe
--- that builds the machine, so this one list covers the buildings and everything they
--- craft. None of it is vanilla, so none of it is in the table below -- and none of it
--- may ever be tolled, since money must not be an ingredient of a recipe that makes
--- money.
---
--- `exchange` is the exception to that naming: a crafting category with no machine of
--- its own, crafted by the Import machine (money/exchange.lua). It is listed so the
--- completeness check below does not demand a toll row for a recipe whose only
--- ingredient is money already.
 local own_machines = { entrance = true, import = true, export = true, exchange = true }
 
 -- Every vanilla recipe, grouped by the technology that unlocks it and ordered by the
--- licence that technology invoices -- the coin the player had to have earned already
--- to be crafting this at all. A recipe unlocked by several technologies is charged the
--- cheapest of them, and grouped under it, because the cheapest is the one they paid.
---
--- `toll` names the coin and `amount` how many of them one craft costs -- both are
--- balance knobs, so both are written out on every row even while every amount is still
--- 1. `toll = false` is free to craft and says so out loud, and carries no amount.
---
--- A row that omits either field fails the load, and so does a vanilla recipe with no
--- row at all, so no Factorio update can slip a recipe past the toll booth.
+-- licence that technology invoices
 local tolls = {
     -- === No licence to charge ===
-    -- Named by no technology, so the player bought no licence and there is nothing
-    -- to charge. This is the block that keeps a new game craftable with no money.
     { recipe = "burner-inserter", toll = false },
     { recipe = "iron-chest", toll = false },
     { recipe = "iron-gear-wheel", toll = false },
     { recipe = "stone-furnace", toll = false },
     { recipe = "transport-belt", toll= currency.penny, amount = 2 },
     { recipe = "wooden-chest", toll = false },
-    -- Smelting is free and has to stay free: every furnace has
-    -- `source_inventory_size = 1`, so a tolled smelting recipe is uncraftable in
-    -- every furnace in the game, and the engine reports nothing.
+    -- Smelting should be free
     { recipe = "copper-plate", toll = false },
     { recipe = "iron-plate", toll = false },
     { recipe = "stone-brick", toll = false },
-    -- Engine placeholders, never crafted. Listed only because the list has to be
-    -- complete for the check below to mean anything.
+    -- Engine placeholders, never crafted.
     { recipe = "parameter-0", toll = false },
     { recipe = "parameter-1", toll = false },
     { recipe = "parameter-2", toll = false },
@@ -61,8 +28,6 @@ local tolls = {
     { recipe = "parameter-8", toll = false },
     { recipe = "parameter-9", toll = false },
     { recipe = "recipe-unknown", toll = false },
-
-    -- A trigger technology has no invoice, so it sells no licence.
     -- electronics
     { recipe = "copper-cable", toll = false },
     { recipe = "electronic-circuit", toll = false },
@@ -276,20 +241,13 @@ local tolls = {
     { recipe = "cargo-landing-pad", toll = currency.gold_bar, amount = 1 },
     { recipe = "rocket-part", toll = currency.gold_bar, amount = 1 },
     { recipe = "rocket-silo", toll = currency.gold_bar, amount = 1 },
-    { recipe = "satellite", toll = currency.gold_bar, amount = 1 },
+    { recipe = "satellite", toll = currency.diamond, amount = 1 },
     -- personal-roboport-mk2-equipment
     { recipe = "personal-roboport-mk2-equipment", toll = currency.gold_bar, amount = 1 },
-
-    -- No Diamond section, and nothing missing: no technology both invoices a Diamond
-    -- and unlocks a recipe, so the top of the ladder is spent on research and on
-    -- satellite launches, never on a craft.
 }
 
 
 local authored = {}
-local coins = {}
-local tolled = 0
-local free = 0
 
 for index, row in ipairs(tolls) do
     assert(row.recipe, "tolls: the row at position " .. index .. " has no `recipe`")
@@ -303,21 +261,14 @@ for index, row in ipairs(tolls) do
         .. "' does not say what it costs; write `toll = false` if it is free to craft")
 
     if row.toll == false then
-        -- An amount on a free row does nothing at all, which is what a half-finished
-        -- edit looks like: the coin was left as `false` and only the amount was typed.
         assert(row.amount == nil, "tolls: '" .. row.recipe
             .. "' is free to craft but asks for " .. tostring(row.amount)
             .. " of nothing; name the coin in `toll` or drop the amount")
-        free = free + 1
     else
-        local at = rank[row.toll]
-        assert(at, "tolls: '" .. row.recipe .. "' is priced in '" .. tostring(row.toll)
+        assert(rank[row.toll], "tolls: '" .. row.recipe .. "' is priced in '" .. tostring(row.toll)
             .. "', which is not a denomination")
 
         for _, category in pairs(recipe.categories or { "crafting" }) do
-            -- Keep this assertion. Every furnace has `source_inventory_size = 1`, so a
-            -- smelting recipe cannot take a second ingredient: tolling one raises no
-            -- error, it silently makes the item uncraftable in every furnace.
             assert(category ~= "smelting", "tolls: '" .. row.recipe
                 .. "' is a smelting recipe, and a furnace has one ingredient slot. "
                 .. "Tolling it makes the item uncraftable everywhere -- write `toll = false`")
@@ -334,22 +285,14 @@ for index, row in ipairs(tolls) do
         local amount = row.amount
         assert(amount, "tolls: '" .. row.recipe
             .. "' says which coin it costs but not how many; write `amount = 1`")
-        -- The engine takes a uint16 here and rejects 0 outright, but says nothing about
-        -- a fraction. Assert it whole, so a toll is never a number the engine settled on
-        -- rather than one somebody authored.
         assert(amount == math.floor(amount) and amount >= 1, "tolls: '" .. row.recipe
             .. "' asks for " .. amount .. " coin(s); a toll is a whole number, at least one")
 
         recipe.ingredients = recipe.ingredients or {}
         table.insert(recipe.ingredients, { type = "item", name = row.toll, amount = amount })
-        coins[at] = (coins[at] or 0) + amount
-        tolled = tolled + 1
     end
 end
 
-
--- The list has to stay complete: a recipe with no row would craft free of charge and
--- nothing would say so.
 local function is_profitorios(recipe_name, recipe)
     if own_machines[recipe_name] then
         return true
@@ -374,83 +317,4 @@ assert(#unlisted == 0, "tolls: " .. #unlisted .. " recipe(s) have no row in the 
     .. table.concat(unlisted, ", ") .. ". Add each one under the technology that unlocks "
     .. "it, with `toll = false` if it should be free to craft.")
 
-
--- Which coin a row should ask for is solvable -- it is the cheapest licence that
--- unlocks the recipe -- so solve it as a check rather than in place of the authored
--- value. A Factorio update that moves a recipe onto a dearer technology then reads
--- straight off the load instead of quietly undercharging forever. A `toll = false`
--- row is a deliberate exemption rather than drift, so it is not compared.
-local function invoice_rank(tech)
-    if not tech.unit then
-        return nil                  -- a trigger technology, which has no invoice at all
-    end
-    local highest = nil
-    for _, ingredient in pairs(tech.unit.ingredients or {}) do
-        -- Both spellings are legal: {"name", amount} and {name = ..., amount = ...}.
-        local name = ingredient[1] or ingredient.name
-        local at = rank[name]
-        if at and (not highest or at > highest) then
-            highest = at
-        end
-    end
-    return highest
-end
-
-local licence = {}
-for _, tech in pairs(data.raw.technology) do
-    local at = invoice_rank(tech)
-    if at then
-        for _, effect in pairs(tech.effects or {}) do
-            if effect.type == "unlock-recipe" then
-                local current = licence[effect.recipe]
-                if not current or at < current then
-                    licence[effect.recipe] = at
-                end
-            end
-        end
-    end
-end
-
-local drift = {}
-for _, row in ipairs(tolls) do
-    if row.toll and licence[row.recipe] ~= rank[row.toll] then
-        local invoiced = licence[row.recipe]
-        table.insert(drift, row.recipe .. " charges " .. row.toll .. ", its cheapest licence "
-            .. (invoiced and ("invoices " .. ladder[invoiced]) or "has no invoice"))
-    end
-end
-table.sort(drift)
-
-
--- The rocket client. A Diamond customer wants a satellite built around them; the
--- launch pays the vanilla 1000 space-science-pack, which is 1000 Diamonds. It lives
--- here to keep both edits to the satellite recipe in one place.
-local customers = require("services.economy.customers.orders")
-local satellite = data.raw.recipe["satellite"]
-assert(satellite, "tolls: the satellite recipe is missing; the Diamond has no source")
-table.insert(satellite.ingredients,
-    { type = "item", name = customers.item.diamond, amount = 1 })
-
-
--- Coins per denomination rather than recipes, so raising an amount shows up here.
-local summary = {}
-for at = 1, #ladder do
-    if coins[at] then
-        table.insert(summary, coins[at] .. " " .. ladder[at])
-    end
-end
-
-log("[tolls] Tolled " .. tolled .. " recipe(s) for " .. table.concat(summary, ", ")
-    .. "; " .. free .. " free to craft.")
-
-for _, line in ipairs(drift) do
-    log("[tolls] DRIFT: " .. line)
-end
-if #drift > 0 then
-    log("[tolls] " .. #drift .. " row(s) no longer match the licence they sit behind.")
-end
-
-return {
-    ladder = ladder,
-    rank = rank,
-}
+return

@@ -18,10 +18,9 @@
 local customers = require("services.economy.customers.orders")
 local currency = require("services.economy.money.currency")
 local resources = require("services.economy.shop.prices")
-local tolls = require("services.economy.money.tolls")
 
-local ladder = tolls.ladder
-local rank = tolls.rank
+local ladder = currency.ladder
+local rank = currency.rank
 
 -- Comparing two cost vectors needs a scalar, and this one is a design-time comparator,
 -- deliberately not the game's exchange rate. money/exchange.lua breaks a coin at 1:5;
