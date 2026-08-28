@@ -91,13 +91,15 @@ end
 
 -- `ladder` is the same six names cheapest-first and `rank` their positions on it, so a
 -- rung comparison reads off the table that defines the order rather than a second copy
--- of it. tolls.lua re-exports both; exchange.lua needs them at the data stage, before
--- tolls has run.
+-- of it. `key_at` turns a rung back into the denomination key, which is what
+-- verify_orders.lua writes into the `orders` table it prints.
 currency.ladder = {}
 currency.rank = {}
+currency.key_at = {}
 for index, denomination in ipairs(denominations) do
     currency.ladder[index] = denomination.pack
     currency.rank[denomination.pack] = index
+    currency.key_at[index] = denomination.key
 end
 
 return currency

@@ -45,8 +45,8 @@ Who walks in, what they order, and the machines that make and pay them.
 - **`entrance.lua`, `export.lua`** — two of the three machines the whole loop runs through (the
   third is `economy/shop/import.lua`), plus the recipes they craft: `customer-new` and the
   `customer_*_deliver` payouts. `export.lua` also wires each band's licence onto its technology.
-- **`verify_orders.lua`** — emits no prototypes. Re-solves the recipe graph and asserts the authored
-  refunds still cover what each order costs, so the numbers in `orders.lua` cannot rot silently.
+- **`verify_orders.lua`** — emits no prototypes. Re-solves the recipe graph and prints
+  `orders.lua`'s table back, corrected, when the solved `cost` and `refund` disagree with it.
   Runs in `data-updates.lua`, after `prices.lua` and `tolls.lua`.
 
 ## `services/economy/money/`
@@ -57,7 +57,8 @@ The denomination ladder, and what everything costs.
   rest of the mod asks for currency item names. Its return table also carries a `technology` key: a
   nested map from denomination to pack name, which `orders.lua` reads to find each band's licence.
 - **`exchange.lua`** — change-making: one recipe per conversion, breaking a denomination into the
-  one below at an authored rate that is always a loss. Its own `exchange` crafting category, handed
+  one below at an authored rate. That rate also folds a bill up, so retuning it
+  re-denominates every refund. Its own `exchange` crafting category, handed
   to the Import machine and deliberately not to the character, so a coin cannot be broken by hand.
   Every row asserts `to` sits below `from`: an exchange running *up* the ladder would let the
   factory mint the coin gating the next tier of research, which is the gate the whole economy rests

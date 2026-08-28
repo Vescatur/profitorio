@@ -4,9 +4,9 @@
 -- recipes that consume them live with the machine that crafts them: `customer-new` in
 -- entrance.lua, `customer_<x>_deliver` in export.lua.
 --
--- The `refund` numbers are authored, not solved. verify_orders.lua re-solves the recipe
--- graph on every load and asserts none has fallen behind what its order costs.
--- See docs/customer-system.md for the ladder and the probability trees.
+-- The `cost` and `refund` numbers are solved, not authored: verify_orders.lua re-solves
+-- the recipe graph on every load and prints this whole table back with corrected numbers
+-- when it disagrees. See docs/customer-system.md for the ladder and the probability trees.
 local currency = require("services.economy.money.currency")
 
 -- A customer's whole life: from the Entrance that mints it to the review it leaves
@@ -27,12 +27,21 @@ local weight_total = 100
 -- `licence` is the technology that unlocks this band's delivery recipes. The penny
 -- band has none and ships enabled: every technology sits behind a lab, a lab behind
 -- copper, and copper behind the first Silver Coin that only the penny band can pay.
+--
+-- `note` is the comment printed above the band's rows. It lives here rather than in the
+-- file because verify_orders.lua reprints the whole table: a comment written straight
+-- into the block below would be deleted by the first paste.
 local bands = {
-    { key = "penny",    currency = currency.penny,       icon = "penny",       licence = nil },
-    { key = "silver",   currency = currency.silver_coin, icon = "silver-coin", licence = currency.technology.silver_coin },
-    { key = "banknote", currency = currency.banknote,    icon = "banknote",    licence = currency.technology.banknote },
-    { key = "bond",     currency = currency.bond,        icon = "bond",        licence = currency.technology.bond },
-    { key = "gold",     currency = currency.gold_bar,    icon = "gold-bar",    licence = currency.technology.gold_bar },
+    { key = "penny",    currency = currency.penny,       icon = "penny",       licence = nil,
+      note = "Penny -- wood, stone and iron, all hand-craftable, no research at all." },
+    { key = "silver",   currency = currency.silver_coin, icon = "silver-coin", licence = currency.technology.silver_coin,
+      note = "Silver -- the first copper, and the first machines built out of it." },
+    { key = "banknote", currency = currency.banknote,    icon = "banknote",    licence = currency.technology.banknote,
+      note = "Banknote -- nothing here exists without coal and crude oil." },
+    { key = "bond",     currency = currency.bond,        icon = "bond",        licence = currency.technology.bond,
+      note = "Bond -- the robot era." },
+    { key = "gold",     currency = currency.gold_bar,    icon = "gold-bar",    licence = currency.technology.gold_bar,
+      note = "Gold -- everything here pays a Bond toll of its own to be built at all." },
 }
 
 
@@ -48,52 +57,74 @@ local bands = {
 -- either end of the ladder fails the load unless its weight is 0; that one tolerance is
 -- what lets a full nineteen-key template be pasted into every row.
 --
--- `refund` is a map of denomination key -> amount and `profit` a plain number in the
--- band's currency.
+-- `cost` is what `amount` of `item` embeds: raw materials at shop prices plus every toll
+-- buried in the recipe tree, one entry per denomination. It is here to be read during a
+-- balance pass and is used by no calculation.
+--
+-- `refund` is that same bill folded up into the band's own coin at the exchange rates,
+-- to three decimals. Both are SOLVED -- verify_orders.lua recomputes them on every load
+-- and prints this table back with the corrections, ready to paste over.
+--
+-- `profit` is the margin on top, as a fraction: 0.25 pays 125%. A delivery hands over
+-- ceil(refund * (profit + 1)) coins, which is the only rounding in the chain.
 --
 -- Penny orders must be craftable from recipes enabled at game start and need no
 -- copper: copper costs Silver, and only the penny band mints one.
 local orders = {
     -- Penny -- wood, stone and iron, all hand-craftable, no research at all.
-    { band = 1, item = "burner-inserter",        amount = 2, refund = { penny = 4 }, profit = 4,
+    { band = 1, item = "burner-inserter",        amount = 2,  profit = 0.25,
+      cost = { penny = 4 }, refund = 4,
       spawn = { same = 80, up1 = 20 } },
-    { band = 1, item = "assembling-machine-1",   amount = 2, refund = { penny = 12 }, profit = 8,
+    { band = 1, item = "assembling-machine-1",   amount = 2,  profit = 0.25,
+      cost = { penny = 12 }, refund = 12,
       spawn = { down1 = 30, same = 40, up1 = 30 } },
-    { band = 1, item = "transport-belt",         amount = 5, refund = { penny = 9 },  profit = 4,
+    { band = 1, item = "transport-belt",         amount = 5,  profit = 0.25,
+      cost = { penny = 8.75 }, refund = 8.75,
       spawn = { down2 = 10, down1 = 20, same = 40, up1 = 30 } },
 
     -- Silver -- the first copper, and the first machines built out of it.
-    { band = 2, item = "inserter",               amount = 1,  refund = { penny = 2, silver_coin = 1 },  profit = 1,
+    { band = 2, item = "inserter",               amount = 1,  profit = 0.25,
+      cost = { penny = 2, silver_coin = 0.375 }, refund = 0.775,
       spawn = { same = 25, up1 = 50, up2 = 25 } },
-    { band = 2, item = "splitter",               amount = 2,  refund = { penny = 26, silver_coin = 4 }, profit = 2,
+    { band = 2, item = "splitter",               amount = 2,  profit = 0.25,
+      cost = { penny = 26, silver_coin = 3.75 }, refund = 8.95,
       spawn = { down1 = 25, same = 25, up1 = 50 } },
-    { band = 2, item = "assembling-machine-2",   amount = 3,   refund = { penny = 53, silver_coin = 7 }, profit = 3,
+    { band = 2, item = "assembling-machine-2",   amount = 3,  profit = 0.25,
+      cost = { penny = 52.5, silver_coin = 6.375 }, refund = 16.875,
       spawn = { down2 = 25, down1 = 25, same = 25, up1 = 25 } },
 
     -- Banknote -- nothing here exists without coal and crude oil.
-    { band = 3, item = "bulk-inserter",          amount = 5,   refund = { penny = 143, silver_coin = 55, banknote = 1 }, profit = 1,
+    { band = 3, item = "bulk-inserter",          amount = 5,  profit = 0.25,
+      cost = { penny = 142.5, silver_coin = 55, banknote = 0.414 }, refund = 17.114,
       spawn = { same = 25, up1 = 50, up2 = 25 } },
-    { band = 3, item = "electric-furnace",       amount = 5,   refund = { penny = 250, silver_coin = 82, banknote = 8 }, profit = 2,
+    { band = 3, item = "electric-furnace",       amount = 5,  profit = 0.25,
+      cost = { penny = 250, silver_coin = 81.25, banknote = 7.069 }, refund = 33.319,
       spawn = { down1 = 25, same = 25, up1 = 50 } },
-    { band = 3, item = "productivity-module",    amount = 10,  refund = { penny = 75, silver_coin = 192, banknote = 5 }, profit = 1,
+    { band = 3, item = "productivity-module",    amount = 10, profit = 0.25,
+      cost = { penny = 75, silver_coin = 191.25, banknote = 4.137 }, refund = 45.387,
       spawn = { down2 = 25, down1 = 25, same = 25, up1 = 25 } },
 
     -- Bond -- the robot era.
-    { band = 4, item = "construction-robot",     amount = 10,  refund = { penny = 119, silver_coin = 82, banknote = 34 },  profit = 1,
+    { band = 4, item = "construction-robot",     amount = 10, profit = 0.25,
+      cost = { penny = 119, silver_coin = 81.25, banknote = 33.382 }, refund = 10.879,
       spawn = { same = 25, up1 = 50, up2 = 25 } },
-    { band = 4, item = "logistic-robot",         amount = 10,  refund = { penny = 129, silver_coin = 139, banknote = 36 }, profit = 1,
+    { band = 4, item = "logistic-robot",         amount = 10, profit = 0.25,
+      cost = { penny = 129, silver_coin = 138.75, banknote = 35.037 }, refund = 13.59,
       spawn = { down1 = 25, same = 25, up1 = 50 } },
-    { band = 4, item = "roboport",               amount = 2,   refund = { penny = 405, silver_coin = 293, banknote = 10 }, profit = 1,
+    { band = 4, item = "roboport",               amount = 2,  profit = 0.25,
+      cost = { penny = 405, silver_coin = 292.5, banknote = 9.446 }, refund = 16.83,
       spawn = { down2 = 25, down1 = 25, same = 25, up1 = 25 } },
 
     -- Gold -- everything here pays a Bond toll of its own to be built at all.
-    { band = 5, item = "express-transport-belt", amount = 20,  refund = { penny = 335, silver_coin = 20, banknote = 4, bond = 20 },   profit = 1,
+    { band = 5, item = "express-transport-belt", amount = 20, profit = 0.25,
+      cost = { penny = 335, silver_coin = 20, banknote = 3.2, bond = 20 }, refund = 4.824,
       spawn = { same = 25, up1 = 50, up2 = 25 } },
-    { band = 5, item = "beacon",                 amount = 5,   refund = { penny = 275, silver_coin = 369, banknote = 9, bond = 5 },   profit = 1,
+    { band = 5, item = "beacon",                 amount = 5,  profit = 0.25,
+      cost = { penny = 275, silver_coin = 368.75, banknote = 8.273, bond = 5 }, refund = 4.721,
       spawn = { down1 = 25, same = 25, up1 = 50 } },
-    -- The last rung. Its `up1` steps off the ladder onto the diamond client, which is
-    -- the only way one enters the population.
-    { band = 5, item = "productivity-module-3",  amount = 2,   refund = { penny = 893, silver_coin = 1487, banknote = 86, bond = 2 }, profit = 1,
+    { band = 5, item = "productivity-module-3",  amount = 2,  profit = 0.25,
+      note = "The last rung. Its `up1` steps off the ladder onto the diamond client, which is the only way one enters the population.",
+      cost = { penny = 892.5, silver_coin = 1487, banknote = 85.01, bond = 2 }, refund = 17.125,
       spawn = { down2 = 25, down1 = 25, same = 25, up1 = 25 } },
 }
 
@@ -133,7 +164,39 @@ end
 -- mid-ladder and run the payout currency up and then back down again.
 for index, order in ipairs(orders) do
     order.index = index
-    assert(bands[order.band], "customers: '" .. order.item .. "' has no band " .. tostring(order.band))
+    local band = bands[order.band]
+    assert(band, "customers: '" .. order.item .. "' has no band " .. tostring(order.band))
+
+    -- Derived, never authored: the coin a delivery pays in follows the band, and an
+    -- authored copy could disagree with the row it sits on.
+    order.currency = band.currency
+
+    assert(type(order.refund) == "number" and order.refund >= 0,
+        "customers: '" .. order.item .. "' refunds " .. tostring(order.refund)
+            .. "; that is one number of " .. band.key .. ", not a map")
+    assert(type(order.profit) == "number" and order.profit >= 0,
+        "customers: '" .. order.item .. "' takes a profit of " .. tostring(order.profit)
+            .. "; that is a fraction of the refund, so 0.25 pays 125% and 0 breaks even")
+
+    -- ceil is the only rounding between the shop price and the coin handed over.
+    order.payout = math.ceil(order.refund * (order.profit + 1))
+
+    local dearest = 0
+    for denomination in pairs(order.cost or {}) do
+        local name = currency[denomination]
+        assert(name, "customers: '" .. order.item .. "' costs '" .. tostring(denomination)
+            .. "', which is not a denomination")
+        dearest = math.max(dearest, currency.rank[name])
+    end
+    -- Nothing runs back up the ladder, so a band paying a coin cheaper than something
+    -- its own recipe tree needs can never fund that need: the order looks solvent and is
+    -- unservable. Not an assert -- Lua builds the message argument whether or not the
+    -- condition holds, and `dearest` is 0 on a row whose `cost` is still the placeholder.
+    if dearest > currency.rank[band.currency] then
+        error("customers: '" .. order.item .. "' is paid in " .. band.key .. " but its cost "
+            .. "reaches " .. currency.key_at[dearest] .. "; a refund breaks downward only, so "
+            .. "that coin could never be earned back. Move the order up a band, or drop the toll", 0)
+    end
 
     local previous = orders[index - 1]
     if previous then
@@ -340,4 +403,7 @@ return {
     is_customer = is_customer,
     entry = entry,
     weight_total = weight_total,
+    -- verify_orders.lua reprints the `spawn` rows and has to walk them in the same order
+    -- the successor list does, or the block it emits reorders keys on every load.
+    steps = steps,
 }

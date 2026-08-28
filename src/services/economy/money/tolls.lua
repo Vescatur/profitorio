@@ -4,8 +4,7 @@
 -- deliver.
 local currency = require("services.economy.money.currency")
 
--- Cheapest denomination first, from currency.lua, which is where that order is
--- defined. Both are re-exported at the bottom: verify_orders.lua reads them from here.
+-- Cheapest denomination first, from currency.lua, which is where that order is defined.
 local ladder = currency.ladder
 local rank = currency.rank
 
@@ -449,8 +448,3 @@ end
 if #drift > 0 then
     log("[tolls] " .. #drift .. " row(s) no longer match the licence they sit behind.")
 end
-
-return {
-    ladder = ladder,
-    rank = rank,
-}

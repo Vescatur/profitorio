@@ -2,7 +2,6 @@
 -- table, and services/economy/money/currency.lua for why the payout is really a science pack.
 local prototypes = require("lib.prototypes")
 local customers = require("services.economy.customers.orders")
-local currency = require("services.economy.money.currency")
 
 local export_tint = {r=0.6, g=0.7, b=1}
 local export_graphics = prototypes.tinted_machine_graphics("assembling-machine-1", export_tint)
@@ -71,45 +70,31 @@ data:extend({
 -- carries the customer who arrives behind this one, as contiguous shared_probability
 -- bands so exactly one successor turns up.
 
--- A recipe may not name the same item in two results, and the refund and profit are
--- frequently the same denomination. Accumulate by item name first, emit once.
-local function payout_of(order, band)
-    local totals = {}
-    local order_of_appearance = {}
+local function payout_of(order)
+    -- One coin, in the band's own denomination: the whole bill folded up plus the margin,
+    -- both settled in orders.lua. What the tree owes in cheaper coins is got by breaking
+    -- this one down (services/economy/money/exchange.lua).
+    local results = {
+        { type = "item", name = order.currency, amount = order.payout },
+    }
 
-    local function pay(currency_name, amount)
-        if not amount or amount <= 0 then
-            return
-        end
-        if not totals[currency_name] then
-            table.insert(order_of_appearance, currency_name)
-        end
-        totals[currency_name] = (totals[currency_name] or 0) + amount
-    end
-
-    for denomination, amount in pairs(order.refund) do
-        assert(currency[denomination],
-            "export: '" .. order.item .. "' refunds '" .. denomination .. "', which is not a denomination")
-        pay(currency[denomination], amount)
-    end
-
-    pay(band.currency, order.profit)
-
-    -- The bridge upward, from whichever grade is top rather than a hard-coded third.
-    if order.is_top then
-        local above = customers.bands[order.band + 1]
-        if above then
-            pay(above.currency, 1)
+    -- The bridge upward, from whichever grade is top rather than a hard-coded third. A
+    -- recipe may not name the same item in two results, and a band whose neighbour deals
+    -- in the same coin would do exactly that, so that one lands on the row above.
+    local above = order.is_top and customers.bands[order.band + 1]
+    if above then
+        if above.currency == order.currency then
+            results[1].amount = results[1].amount + 1
+        else
+            table.insert(results, { type = "item", name = above.currency, amount = 1 })
         end
     end
 
-    local results = {}
-    for _, currency_name in ipairs(order_of_appearance) do
-        local amount = totals[currency_name]
-        assert(amount == math.floor(amount) and amount > 0 and amount <= 65535,
-            "export: '" .. order.item .. "' pays " .. amount .. " " .. currency_name
+    for _, result in ipairs(results) do
+        assert(result.amount == math.floor(result.amount)
+            and result.amount > 0 and result.amount <= 65535,
+            "export: '" .. order.item .. "' pays " .. result.amount .. " " .. result.name
                 .. "; a result amount must be a positive integer below 65536")
-        table.insert(results, { type = "item", name = currency_name, amount = amount })
     end
     return results
 end
@@ -150,7 +135,7 @@ local gated = 0
 
 for _, order in ipairs(customers.orders) do
     local band = customers.bands[order.band]
-    local results = payout_of(order, band)
+    local results = payout_of(order)
     append_successors(results, order)
 
     -- The denomination it pays in, with the goods overlaid, so the crafting menu

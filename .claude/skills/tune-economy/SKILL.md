@@ -71,8 +71,14 @@ and `seconds`. All five are written out on every row even though the rate is 1:5
 - **The rate should stay a loss.** The refund table pays around 8 Pennies for the work that earns
   one Silver Coin, so 5 keeps change-making a convenience rather than an income. Nothing enforces
   that: there is no reference rate to solve against, so it is judgement, not a check.
-- **`verify_orders.lua` ignores these recipes**, by category. A rate change cannot make an order's
-  refund go short, so unlike a price or a toll it needs no refund pass.
+- **A rate change re-denominates every refund.** `verify_orders.lua` still leaves these recipes out
+  of the cost graph, by category — but the rates themselves are the ruler it folds a
+  multi-denomination bill up with, so the next load prints a corrected `orders` table. Paste it.
+- **`seconds` is the throughput knob that matters now.** An order pays one coin of its band, and the
+  cheaper coins its tree owes are got by breaking that down, so exchange time is on the critical
+  path of the whole economy.
+- **Raising `spend` above 1 is a trap.** It strands a player holding fewer coins than a row spends,
+  and a pair may only have one row, so there is no small-change fallback to offer alongside it.
 
 A non-adjacent pair — Diamond straight to Penny — is a new row and nothing else. The schema already
 takes any pair that goes down.
