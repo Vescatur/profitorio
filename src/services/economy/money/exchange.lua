@@ -26,8 +26,8 @@ require("services.economy.shop.import")
 -- knob for that, and raising `spend` above 1 is the trap -- it strands a player holding
 -- fewer coins than a row spends, and a pair may only have one row.
 local exchanges = {
-    { from = "silver_coin", to = "penny",       spend = 1, receive = 5, seconds = 0.5 },
-    { from = "banknote",    to = "silver_coin", spend = 1, receive = 5, seconds = 0.5 },
+    { from = "silver_coin", to = "penny",       spend = 1, receive = 6, seconds = 0.5 },
+    { from = "banknote",    to = "silver_coin", spend = 1, receive = 7, seconds = 0.5 },
     { from = "bond",        to = "banknote",    spend = 1, receive = 5, seconds = 0.5 },
     { from = "gold_bar",    to = "bond",        spend = 1, receive = 5, seconds = 0.5 },
     { from = "diamond",     to = "gold_bar",    spend = 1, receive = 5, seconds = 0.5 },

@@ -37,13 +37,13 @@ local resources = {
     },
     {
         item = "copper-ore",
-        amount = 4,
+        amount = 2,
         price = 1,
         currency = currency.silver_coin
     },
     {
         item = "coal",
-        amount = 100,
+        amount = 5,
         price = 1,
         currency = currency.banknote
     },
@@ -51,7 +51,7 @@ local resources = {
         -- Unbarrelling hands back a reusable empty barrel, so the only ongoing cost
         -- is the oil itself.
         item = "crude-oil-barrel",
-        amount = 10,
+        amount = 1,
         price = 1,
         currency = currency.banknote
     }

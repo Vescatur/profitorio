@@ -7,11 +7,11 @@ local own_machines = { entrance = true, import = true, export = true, exchange =
 local tolls = {
     -- === No licence to charge ===
     { recipe = "burner-inserter", toll = false },
-    { recipe = "iron-chest", toll = false },
-    { recipe = "iron-gear-wheel", toll = false },
-    { recipe = "stone-furnace", toll = false },
-    { recipe = "transport-belt", toll= currency.penny, amount = 2 },
-    { recipe = "wooden-chest", toll = false },
+    { recipe = "iron-chest", toll = currency.penny, amount = 1 },
+    { recipe = "iron-gear-wheel", toll = currency.penny, amount = 1 },
+    { recipe = "stone-furnace", toll = currency.penny, amount = 1 },
+    { recipe = "transport-belt", toll = currency.penny, amount = 1 },
+    { recipe = "wooden-chest", toll = currency.penny, amount = 1 },
     -- Smelting should be free
     { recipe = "copper-plate", toll = false },
     { recipe = "iron-plate", toll = false },
@@ -29,18 +29,18 @@ local tolls = {
     { recipe = "parameter-9", toll = false },
     { recipe = "recipe-unknown", toll = false },
     -- electronics
-    { recipe = "copper-cable", toll = false },
-    { recipe = "electronic-circuit", toll = false },
-    { recipe = "inserter", toll = false },
-    { recipe = "lab", toll = false },
+    { recipe = "copper-cable", toll = currency.penny, amount = 1 },
+    { recipe = "electronic-circuit", toll = currency.penny, amount = 1 },
+    { recipe = "inserter", toll = currency.penny, amount = 1 },
+    { recipe = "lab", toll = currency.penny, amount = 1 },
     -- steam-power
-    { recipe = "offshore-pump", toll = false },
-    { recipe = "pipe", toll = false },
-    { recipe = "pipe-to-ground", toll = false },
+    { recipe = "offshore-pump", toll = currency.penny, amount = 1 },
+    { recipe = "pipe", toll = currency.penny, amount = 1 },
+    { recipe = "pipe-to-ground", toll = currency.penny, amount = 1 },
 
     -- === Penny licences ===
     -- automation
-    { recipe = "assembling-machine-1", toll = currency.penny, amount = 1 },
+    { recipe = "assembling-machine-1", toll = false },
     { recipe = "long-handed-inserter", toll = currency.penny, amount = 1 },
     -- fast-inserter
     { recipe = "fast-inserter", toll = currency.penny, amount = 1 },
