@@ -1,5 +1,5 @@
 local currency = require("services.economy.money.currency")
-
+local rank = currency.rank
 local own_machines = { entrance = true, import = true, export = true, exchange = true }
 
 -- Every vanilla recipe, grouped by the technology that unlocks it and ordered by the
