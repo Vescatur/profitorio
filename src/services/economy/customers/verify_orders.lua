@@ -23,8 +23,8 @@ local exchange = require("services.economy.money.exchange")
 local resources = require("services.economy.shop.prices")
 
 -- Required for the side effect, not for a value: the toll coins have to be in the
--- recipes before the graph below is solved, or every order prices as untolled.
--- data-updates.lua orders the two, and this says so where it matters.
+-- recipes before the graph below is solved, or every order prices as untolled -- and a
+-- refund is generated from that, so it would be silently wrong rather than missing.
 require("services.economy.money.tolls")
 
 local ladder = currency.ladder

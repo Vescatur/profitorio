@@ -196,8 +196,7 @@ Making a thing costs a coin. Which coin is **authored**, one row per vanilla rec
 the game has a row, and one with none fails the load by name. Rows are grouped by the technology
 that unlocks the recipe, because owning that licence is what let you build the thing at all; where
 several technologies unlock one recipe it is priced at the **cheapest** of them, since that is the
-one the player actually paid for. The load re-solves that and logs a `[tolls] DRIFT:` line for any
-row that has fallen out of step, but the authored value still wins.
+one the player actually paid for. Nothing solves that for you; the row is the only answer.
 
 The `amount` field is the knob that makes a recipe expensive
 without moving it up the ladder.

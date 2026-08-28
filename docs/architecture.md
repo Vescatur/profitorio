@@ -45,6 +45,8 @@ Who walks in, what they order, and the machines that make and pay them.
 - **`entrance.lua`, `export.lua`** — two of the three machines the whole loop runs through (the
   third is `economy/shop/import.lua`), plus the recipes they craft: `customer-new` and the
   `customer_*_deliver` payouts. `export.lua` also wires each band's licence onto its technology.
+- **`satellite.lua`** — puts the Diamond client into the vanilla `satellite` recipe, so a launch
+  consumes the customer rather than paying for one.
 - **`verify_orders.lua`** — emits no prototypes. Re-solves the recipe graph and prints
   `orders.lua`'s table back, corrected, when the solved `cost` and `refund` disagree with it.
   Runs in `data-updates.lua`, after `prices.lua` and `tolls.lua`.
@@ -69,8 +71,7 @@ The denomination ladder, and what everything costs.
   naming the denomination and how many coins it costs, or `toll = false` for free, grouped by the
   technology that unlocks it and ordered by the licence that technology invoices. The list must stay
   complete: a vanilla recipe with no row fails the load by name, so no Factorio update can slip one
-  past the toll booth. It also re-solves the cheapest licence per recipe and logs any row that has
-  drifted off it. Also puts the Diamond client into the `satellite` recipe.
+  past the toll booth.
 
 ## `services/economy/shop/`
 

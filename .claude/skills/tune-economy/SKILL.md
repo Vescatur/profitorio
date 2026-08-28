@@ -1,6 +1,6 @@
 ---
 name: tune-economy
-description: Change what something costs in Profitorio — a shop price in src/services/economy/shop/prices.lua, a crafting toll in src/services/economy/money/tolls.lua, or an exchange rate in src/services/economy/money/exchange.lua. Use when asked to add or reprice a purchasable resource, change what a recipe costs to craft, make something free or more expensive, add a toll row for a new vanilla recipe, retune what breaking a coin pays out or add a conversion between two denominations, or when a load fails naming an untolled recipe, logs a "[tolls] DRIFT:" line, or fails a verify_orders refund assertion.
+description: Change what something costs in Profitorio — a shop price in src/services/economy/shop/prices.lua, a crafting toll in src/services/economy/money/tolls.lua, or an exchange rate in src/services/economy/money/exchange.lua. Use when asked to add or reprice a purchasable resource, change what a recipe costs to craft, make something free or more expensive, add a toll row for a new vanilla recipe, retune what breaking a coin pays out or add a conversion between two denominations, or when a load fails naming an untolled recipe or fails a verify_orders stale-cost check.
 ---
 
 # Tune a price or a toll
@@ -38,12 +38,9 @@ because that is the one the player actually paid for.
 
 ### The two load-time checks
 
-Neither replaces the authored value:
-
-- Any vanilla recipe with no row **fails the load naming it**, so no Factorio update can slip one
-  past the toll booth.
-- Every row whose toll no longer matches the licence it sits behind is logged as a `[tolls] DRIFT:`
-  line. Advisory — the authored value still wins.
+Any vanilla recipe with no row **fails the load naming it**, so no Factorio update can slip one
+past the toll booth. Which coin a row asks for is not checked against the licence it sits behind —
+that is your judgement.
 
 Nothing solves the `amount`. It is a design knob like `profit` in `orders.lua`.
 

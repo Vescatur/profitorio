@@ -70,7 +70,13 @@ BUDGETS = {
     # in reach that is outside the repo, the old tooling defaulted to violating it,
     # and every failure mode is silent -- so an agent has to know it before it edits
     # a tools/ script, not after being pointed at a doc.
-    "CLAUDE.md": 3260,
+    #
+    # Raised again, from 3260, for the project-map line for customers/satellite.lua.
+    # The map is one clause per file and has to stay complete, so a new source file
+    # costs about ten words and there is no way to pay for it from inside the map --
+    # every line there is already a single clause. Split out of tolls.lua, which was
+    # editing the satellite recipe as a side errand.
+    "CLAUDE.md": 3270,
     "docs/architecture.md": 2000,
     # Raised once, from 3000, when spawn config moved from per-band grade indexes to
     # relative ladder steps. "Spawn weights" now has to carry a key vocabulary that did
