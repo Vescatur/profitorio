@@ -1,10 +1,12 @@
--- verify_orders.lua -- the load-time check that the authored refunds still cover the bill.
--- Emits no prototypes; it is a smoke alarm.
+-- verify_orders.lua -- solves what every order costs and prints the `orders` table back
+-- with the answer. Emits no prototypes.
 --
--- The refunds in orders.lua are authored, and authored numbers rot: change a shop
--- price, move a toll, take a Factorio update that re-costs a vanilla recipe, and the
--- refund quietly stops covering the order. That is a leak, not a crash. So this
--- re-solves the recipe graph on every load and asserts nothing has fallen behind.
+-- `cost` and `refund` in orders.lua are solved numbers living in an authored table, and
+-- they rot: change a shop price, move a toll, retune an exchange rate, take a Factorio
+-- update that re-costs a vanilla recipe, and they quietly stop matching. So this
+-- re-solves the graph on every load and, when it disagrees, logs the whole corrected
+-- block ready to paste over -- then stops the load, because a table nobody pasted is
+-- still wrong.
 --
 -- Per ordered item it computes the cost of one unit as a vector over the six
 -- denominations: raw materials at shop prices, plus one coin per toll anywhere in
@@ -17,7 +19,13 @@
 
 local customers = require("services.economy.customers.orders")
 local currency = require("services.economy.money.currency")
+local exchange = require("services.economy.money.exchange")
 local resources = require("services.economy.shop.prices")
+
+-- Required for the side effect, not for a value: the toll coins have to be in the
+-- recipes before the graph below is solved, or every order prices as untolled -- and a
+-- refund is generated from that, so it would be silently wrong rather than missing.
+require("services.economy.money.tolls")
 
 local ladder = currency.ladder
 local rank = currency.rank
@@ -199,17 +207,129 @@ local function cost_of(key, visiting)
 end
 
 
-local function describe(vector)
-    local parts = {}
-    for at = 1, #ladder do
-        if vector[at] and vector[at] > 0.0005 then
-            table.insert(parts, string.format("%.2f %s", vector[at], ladder[at]))
-        end
-    end
-    return #parts > 0 and table.concat(parts, " + ") or "nothing"
+-- Below this a rung is noise rather than a price: a coin amortised over a big recipe
+-- leaves a crumb many decimal places down. Nothing is forgiven -- the fold below reads
+-- the whole vector -- this only decides what is worth printing.
+local presence = 0.0005
+
+
+-- Three decimals, so a fold never produces a number nobody can retype. Nudged before
+-- the ceil: `value * 1000` can land one ULP above a whole number, and a bare math.ceil
+-- would add a thousandth that the NEXT load takes straight back off. A table that never
+-- settles is worse than one that is a thousandth light.
+local function to_millis(value)
+    return math.ceil(value * 1000 - 1e-6)
 end
 
-local shortfalls = 0
+
+-- What the table already says, in the same units, so the comparison is between two
+-- integers and a clean three-decimal literal can always be matched exactly.
+local function authored_millis(value)
+    return math.floor((value or 0) * 1000 + 0.5)
+end
+
+
+local function literal(value)
+    if value == math.floor(value) then
+        return string.format("%d", value)
+    end
+    -- %.3f pads, so 0.25 would come out as "0.250" -- three digits nobody chose.
+    local text = string.format("%.3f", value):gsub("0+$", "")
+    return (text:gsub("%.$", ""))
+end
+
+
+local function money(vector)
+    local parts = {}
+    for at = 1, #ladder do
+        if (vector[at] or 0) > presence then
+            parts[#parts + 1] = currency.key_at[at] .. " = "
+                .. literal(to_millis(vector[at]) / 1000)
+        end
+    end
+    return #parts > 0 and ("{ " .. table.concat(parts, ", ") .. " }") or "{}"
+end
+
+
+-- Ladder order, from the module that owns it, so the printed row and the successor walk
+-- cannot disagree. `if spawn[key]` rather than a truth test: an authored 0 is a
+-- deliberate "never take this step" and has to survive the round trip.
+local function weights(spawn)
+    local parts = {}
+    for _, key in ipairs(customers.steps) do
+        if spawn[key] then
+            parts[#parts + 1] = key .. " = " .. literal(spawn[key])
+        end
+    end
+    return "{ " .. table.concat(parts, ", ") .. " }"
+end
+
+
+local comment_width = 92
+
+local function wrap(text, into)
+    local line = nil
+    for word in text:gmatch("%S+") do
+        if line and #line + 1 + #word > comment_width then
+            into[#into + 1] = line
+            line = nil
+        end
+        line = line and (line .. " " .. word) or ("    -- " .. word)
+    end
+    if line then
+        into[#into + 1] = line
+    end
+end
+
+
+-- Rendering the table rather than only complaining about it: `cost` and `refund` are
+-- solved numbers, so the only sane way to edit them is to paste this over the block.
+-- Idempotent by construction -- pasting the output and loading again prints the same
+-- bytes, which is why every number goes through `literal` and every comparison through
+-- the millis pair above.
+--
+-- A band's comment comes from bands[n].note, which sits outside the block and survives
+-- a paste. A row's comes from `note` on the row, which is why that one is emitted as a
+-- field rather than as a comment: a comment inside the block would be pasted away.
+local function corrected_table(rows)
+    local item_width, amount_width = 0, 0
+    for _, row in ipairs(rows) do
+        item_width = math.max(item_width, #row.item_text)
+        amount_width = math.max(amount_width, #row.amount_text)
+    end
+
+    local lines = { "local orders = {" }
+    local band_open = nil
+
+    for _, row in ipairs(rows) do
+        local order = row.order
+        if order.band ~= band_open then
+            if band_open then
+                lines[#lines + 1] = ""
+            end
+            band_open = order.band
+            wrap(customers.bands[order.band].note, lines)
+        end
+
+        lines[#lines + 1] = "    { band = " .. order.band .. ", "
+            .. row.item_text .. string.rep(" ", item_width - #row.item_text) .. " "
+            .. row.amount_text .. string.rep(" ", amount_width - #row.amount_text)
+            .. " profit = " .. literal(order.profit) .. ","
+        if order.note then
+            lines[#lines + 1] = "      note = " .. string.format("%q", order.note) .. ","
+        end
+        lines[#lines + 1] = "      cost = " .. money(row.cost)
+            .. ", refund = " .. literal(row.refund) .. ","
+        lines[#lines + 1] = "      spawn = " .. weights(order.spawn) .. " },"
+    end
+
+    lines[#lines + 1] = "}"
+    return table.concat(lines, "\n")
+end
+
+
+local stale = 0
+local rows = {}
 
 for _, order in ipairs(customers.orders) do
     local unit = cost_of(key_of("item", order.item), {})
@@ -220,34 +340,56 @@ for _, order in ipairs(customers.orders) do
         owed[at] = (unit[at] or 0) * order.amount
     end
 
-    local refunded = {}
-    for denomination, amount in pairs(order.refund) do
-        local name = currency[denomination]
-        assert(name, "cost: '" .. order.item .. "' refunds '" .. denomination
-            .. "', which is not a denomination")
-        refunded[rank[name]] = amount
-    end
+    -- The band's own coin, and the whole bill folded into it at the exchange rates.
+    -- orders.lua refuses a bill reaching above that coin, so whatever is handed over can
+    -- always be broken back down into what the recipe tree actually owes.
+    local at = rank[order.currency]
+    local solved = to_millis(exchange.value_at(owed, at))
+    local refund = solved / 1000
 
-    -- Rung by rung, and no credit for change-making: a refund has to cover its bill in
-    -- the denomination the bill is in, even though the exchange could break a dearer
-    -- coin into it. Strict in the safe direction.
-    for at = 1, #ladder do
-        local due = owed[at] or 0
-        local paid = refunded[at] or 0
-        -- A hundredth of a coin of slack, so floating point cannot manufacture a
-        -- shortfall out of an exact match.
-        if paid + 0.01 < due then
-            shortfalls = shortfalls + 1
-            log("[cost] SHORT: " .. order.amount .. " x " .. order.item .. " costs "
-                .. describe(owed) .. ", refund pays " .. describe(refunded))
-            break
+    local drifted = authored_millis(order.refund) ~= solved
+
+    local authored_cost = {}
+    for denomination, amount in pairs(order.cost or {}) do
+        authored_cost[rank[currency[denomination]]] = amount
+    end
+    for rung = 1, #ladder do
+        local shown = owed[rung] > presence and to_millis(owed[rung]) or 0
+        if shown ~= authored_millis(authored_cost[rung]) then
+            drifted = true
         end
     end
 
+    if drifted then
+        stale = stale + 1
+    end
+
+    rows[#rows + 1] = {
+        order = order,
+        cost = owed,
+        refund = refund,
+        item_text = 'item = "' .. order.item .. '",',
+        amount_text = "amount = " .. order.amount .. ",",
+    }
+
+    -- The balancing readout the `cost` column cannot be: what one delivery costs against
+    -- what it hands back, with the margin actually paid once `ceil` has rounded up.
+    local margin = refund > 0 and math.floor((order.payout / refund - 1) * 100 + 0.5) or 0
+    log("[cost] " .. order.amount .. " x " .. order.item .. " costs " .. literal(refund) .. " "
+        .. currency.key_at[at] .. ", pays " .. order.payout .. " (+" .. margin .. "%)")
 end
 
-assert(shortfalls == 0, "cost: " .. shortfalls
-    .. " order(s) refund less than they cost -- see the [cost] SHORT lines above. "
-    .. "The authored refunds in services/economy/customers/orders.lua have gone stale.")
+if stale > 0 then
+    -- One log call: Factorio prefixes only the first line of an entry, so the pasteable
+    -- block starts on line two and comes out clean. tools/check/prototypes.ps1 prints all
+    -- of stdout before it reads the exit code, so this survives the failure below.
+    log("[cost] " .. stale .. " order(s) no longer match what they cost. Paste this over the "
+        .. "`orders` table in services/economy/customers/orders.lua:\n\n"
+        .. corrected_table(rows) .. "\n")
+    -- error() rather than assert(): assert builds its message on the passing path too,
+    -- and there is nothing to say when nothing drifted.
+    error("cost: " .. stale .. " order(s) have a stale cost or refund -- the corrected `orders` "
+        .. "table is in the [cost] block above", 0)
+end
 
-log("[cost] All " .. #customers.orders .. " refunds cover their order.")
+log("[cost] All " .. #customers.orders .. " orders match what they cost.")

@@ -241,9 +241,13 @@ local tolls = {
     { recipe = "cargo-landing-pad", toll = currency.gold_bar, amount = 1 },
     { recipe = "rocket-part", toll = currency.gold_bar, amount = 1 },
     { recipe = "rocket-silo", toll = currency.gold_bar, amount = 1 },
-    { recipe = "satellite", toll = currency.diamond, amount = 1 },
+    { recipe = "satellite", toll = currency.gold_bar, amount = 1 },
     -- personal-roboport-mk2-equipment
     { recipe = "personal-roboport-mk2-equipment", toll = currency.gold_bar, amount = 1 },
+
+    -- No Diamond section, and nothing missing: no technology both invoices a Diamond
+    -- and unlocks a recipe, so the top of the ladder is spent on research and on
+    -- satellite launches, never on a craft.
 }
 
 
@@ -316,5 +320,3 @@ table.sort(unlisted)
 assert(#unlisted == 0, "tolls: " .. #unlisted .. " recipe(s) have no row in the toll table: "
     .. table.concat(unlisted, ", ") .. ". Add each one under the technology that unlocks "
     .. "it, with `toll = false` if it should be free to craft.")
-
-return

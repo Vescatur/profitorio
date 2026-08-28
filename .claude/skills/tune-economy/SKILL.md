@@ -1,6 +1,6 @@
 ---
 name: tune-economy
-description: Change what something costs in Profitorio — a shop price in src/services/economy/shop/prices.lua, a crafting toll in src/services/economy/money/tolls.lua, or an exchange rate in src/services/economy/money/exchange.lua. Use when asked to add or reprice a purchasable resource, change what a recipe costs to craft, make something free or more expensive, add a toll row for a new vanilla recipe, retune what breaking a coin pays out or add a conversion between two denominations, or when a load fails naming an untolled recipe, logs a "[tolls] DRIFT:" line, or fails a verify_orders refund assertion.
+description: Change what something costs in Profitorio — a shop price in src/services/economy/shop/prices.lua, a crafting toll in src/services/economy/money/tolls.lua, or an exchange rate in src/services/economy/money/exchange.lua. Use when asked to add or reprice a purchasable resource, change what a recipe costs to craft, make something free or more expensive, add a toll row for a new vanilla recipe, retune what breaking a coin pays out or add a conversion between two denominations, or when a load fails naming an untolled recipe or fails a verify_orders stale-cost check.
 ---
 
 # Tune a price or a toll
@@ -38,12 +38,9 @@ because that is the one the player actually paid for.
 
 ### The two load-time checks
 
-Neither replaces the authored value:
-
-- Any vanilla recipe with no row **fails the load naming it**, so no Factorio update can slip one
-  past the toll booth.
-- Every row whose toll no longer matches the licence it sits behind is logged as a `[tolls] DRIFT:`
-  line. Advisory — the authored value still wins.
+Any vanilla recipe with no row **fails the load naming it**, so no Factorio update can slip one
+past the toll booth. Which coin a row asks for is not checked against the licence it sits behind —
+that is your judgement.
 
 Nothing solves the `amount`. It is a design knob like `profit` in `orders.lua`.
 
@@ -71,8 +68,14 @@ and `seconds`. All five are written out on every row even though the rate is 1:5
 - **The rate should stay a loss.** The refund table pays around 8 Pennies for the work that earns
   one Silver Coin, so 5 keeps change-making a convenience rather than an income. Nothing enforces
   that: there is no reference rate to solve against, so it is judgement, not a check.
-- **`verify_orders.lua` ignores these recipes**, by category. A rate change cannot make an order's
-  refund go short, so unlike a price or a toll it needs no refund pass.
+- **A rate change re-denominates every refund.** `verify_orders.lua` still leaves these recipes out
+  of the cost graph, by category — but the rates themselves are the ruler it folds a
+  multi-denomination bill up with, so the next load prints a corrected `orders` table. Paste it.
+- **`seconds` is the throughput knob that matters now.** An order pays one coin of its band, and the
+  cheaper coins its tree owes are got by breaking that down, so exchange time is on the critical
+  path of the whole economy.
+- **Raising `spend` above 1 is a trap.** It strands a player holding fewer coins than a row spends,
+  and a pair may only have one row, so there is no small-change fallback to offer alongside it.
 
 A non-adjacent pair — Diamond straight to Penny — is a new row and nothing else. The schema already
 takes any pair that goes down.

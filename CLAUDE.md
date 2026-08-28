@@ -179,9 +179,10 @@ One clause per file. The reasoning is in [docs/architecture.md](docs/architectur
 - `services/economy/customers/orders.lua` — the band and order tables, the shared five-minute life
 - `services/economy/customers/entrance.lua` — the machine that mints customers, and `customer-new`
 - `services/economy/customers/export.lua` — the delivery payouts, and each band's licence
-- `services/economy/customers/verify_orders.lua` — emits nothing; asserts refunds still cover cost
+- `services/economy/customers/satellite.lua` — puts the rocket client inside the satellite
+- `services/economy/customers/verify_orders.lua` — emits nothing; prints the solved costs
 - `services/economy/money/currency.lua` — the denomination ladder, and the names it owns
-- `services/economy/money/exchange.lua` — breaks a coin downward, never up
+- `services/economy/money/exchange.lua` — breaks a coin downward; folds bills up
 - `services/economy/money/tolls.lua` — one row per vanilla recipe: what a craft costs
 - `services/economy/shop/prices.lua` — the `buy_*` price list
 - `services/economy/shop/import.lua` — the machine that crafts them

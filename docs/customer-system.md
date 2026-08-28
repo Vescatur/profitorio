@@ -155,29 +155,31 @@ on the rung above the last order, reached today only by the gold band's last.
 Each order has a delivery recipe `customer_{item}_deliver`:
 
 - **inputs**: 1 customer item + N of the requested item;
-- **outputs**: the refund, the profit, the bridge if this is a top order, and exactly one new
-  customer via weighted probability.
+- **outputs**: the payout, the bridge if this is a top order, and exactly one new customer via
+  weighted probability.
 
-The refund and the profit are frequently the same denomination, and a recipe may not name the same
-item twice, so the payout builder accumulates by item before emitting.
+A top order's bridge coin can be the denomination it already pays in, and a recipe may not name the
+same item twice, so the payout builder accumulates by item before emitting.
 
 ### 3a. The refund
 
-A delivery hands back the **full embedded cost** of what was delivered: the raw materials at the
-shop's prices, in whichever denomination the shop charges for them, plus every crafting toll buried
-anywhere in the item's recipe tree. Then it pays profit on top, as a separate item. Serving is
-break-even plus margin, never a loss — what an order really costs you is time and floor space.
+A delivery hands back the **full embedded cost** of what was delivered — raw materials at the
+shop's prices plus every crafting toll in the item's recipe tree — and a margin on top. Serving is
+break-even plus margin, never a loss; what an order really costs you is time and floor space.
 
-The margin is authored too, and unlike the refund nothing solves or checks it — it is a tuning
-number, in the same class as the spawn weights. The current table pays a fifth of the refund's line
-**in the band's own denomination**, floored at one coin, which is why a band whose goods embed none
-of its own coin pays that floor: the Bond band pays one Bond, because nothing on the robot path
-carries a Bond toll.
+`cost` on the row records that bill per denomination, to read during a balance
+pass. What the delivery pays is `refund`: the same bill folded up into **the band's own
+coin** at the exchange rates, to three decimals. `profit` is the margin as a **fraction** — `0.25`
+pays 125% — and the recipe hands over `ceil(refund × (profit + 1))` coins, the only rounding in the
+chain.
 
-Those numbers are **authored**, not solved at load: literal, diffable, tunable. The risk with
-authored numbers is that they rot, so [`src/services/economy/customers/verify_orders.lua`](../src/services/economy/customers/verify_orders.lua) re-solves
-the whole recipe graph on every load and asserts that no refund has fallen behind. Change a shop
-price or a toll and that assertion is what tells you.
+One coin per delivery means the cheaper coins a recipe tree owes are got by breaking it down, so
+the exchange is infrastructure rather than a convenience. A load assertion stops that deadlocking:
+no order's cost may reach above its band's coin, because nothing runs back up the ladder.
+
+Both are **solved**. [`src/services/economy/customers/verify_orders.lua`](../src/services/economy/customers/verify_orders.lua)
+re-solves the graph on every load; when it disagrees it logs the corrected `orders` table and
+fails the load — paste the block over the old one.
 
 ### 4. Buying resources
 
@@ -194,10 +196,9 @@ Making a thing costs a coin. Which coin is **authored**, one row per vanilla rec
 the game has a row, and one with none fails the load by name. Rows are grouped by the technology
 that unlocks the recipe, because owning that licence is what let you build the thing at all; where
 several technologies unlock one recipe it is priced at the **cheapest** of them, since that is the
-one the player actually paid for. The load re-solves that and logs a `[tolls] DRIFT:` line for any
-row that has fallen out of step, but the authored value still wins.
+one the player actually paid for. Nothing solves that for you; the row is the only answer.
 
-Every toll is currently one coin. The `amount` field is the knob that makes a recipe expensive
+The `amount` field is the knob that makes a recipe expensive
 without moving it up the ladder.
 
 The effect is that every assembler needs a money input line — the bus stops being a material bus and
@@ -281,9 +282,9 @@ economy design decision, not a revert.
 
 The five remaining vanilla pack recipes are **deleted**, not hidden. Red is copper plate + gear and
 green is inserter + belt, all craftable from purchased plates — leaving them in would let the factory
-print its own money. Exchange between denominations runs **downward only** (`exchange.lua`), at a
-rate that is always a loss: a coin breaks into smaller ones and nothing assembles one from smaller
-ones. Both rules keep one property true: the denomination a customer pays in gates the tier of
+print its own money. Exchange between denominations runs **downward only** (`exchange.lua`): a coin
+breaks into smaller ones and nothing assembles one from smaller ones. Those rates are also the ruler
+a bill is folded up with, so a refund broken back down is worth exactly what it cost. Both rules keep one property true: the denomination a customer pays in gates the tier of
 research you can afford.
 
 ### Bond and Gold are partly parallel

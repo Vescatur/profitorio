@@ -17,10 +17,14 @@ require("services.economy.shop.import")
 -- Any pair is legal as long as `to` sits below `from`; only the adjacent rungs are
 -- authored, so breaking a Diamond down into Pennies is four crafts.
 --
--- 1:5 is a deliberate loss. The refund table pays around 8 Pennies for the work that
--- earns one Silver Coin, so breaking a coin is always worse than earning the lower
--- one directly -- change-making is a convenience, not an income. The top three rungs
--- have no refund ratio to read a fair rate off and are first guesses.
+-- These rates are also the ruler `value_at` below folds a bill up with, and a customer
+-- order is refunded in its band's coin alone -- so a rate change re-denominates every
+-- refund in the game, and the next load prints a corrected `orders` table.
+--
+-- That makes change-making mandatory rather than a convenience: a band pays one coin
+-- and the tolls underneath it are owed in cheaper ones. `seconds` is the throughput
+-- knob for that, and raising `spend` above 1 is the trap -- it strands a player holding
+-- fewer coins than a row spends, and a pair may only have one row.
 local exchanges = {
     { from = "silver_coin", to = "penny",       spend = 1, receive = 5, seconds = 0.5 },
     { from = "banknote",    to = "silver_coin", spend = 1, receive = 5, seconds = 0.5 },
@@ -111,6 +115,56 @@ for index, row in ipairs(exchanges) do
     table.insert(summary, row.spend .. " " .. row.from .. " -> " .. row.receive .. " " .. row.to)
 end
 
+
+-- What one coin of each rung breaks into, read off the rows rather than assumed. Only
+-- the adjacent chain is used: a longer row is legal, and pricing through it would
+-- disagree with pricing through the steps it skips.
+local factor = {}
+for _, row in ipairs(exchanges) do
+    local from = currency.rank[currency[row.from]]
+    if currency.rank[currency[row.to]] == from - 1 then
+        factor[from] = row.receive / row.spend
+    end
+end
+
+-- Each rung's worth in the cheapest coin on the ladder. Cumulative, so it follows a
+-- retuned rate instead of restating one.
+local worth = { 1 }
+for at = 2, #currency.ladder do
+    assert(factor[at], "exchange: nothing breaks a " .. currency.ladder[at] .. " into a "
+        .. currency.ladder[at - 1] .. ", so a bill spanning those two rungs can be priced in "
+        .. "neither. Every adjacent pair needs its own row, even where a longer one already "
+        .. "skips past it")
+    -- A rung worth no more than the one below makes "the dearer coin" meaningless, and
+    -- folding a bill upward would shrink it. The engine takes such a recipe happily; it
+    -- is only the money that stops making sense.
+    assert(factor[at] > 1, "exchange: one " .. currency.ladder[at] .. " breaks into only "
+        .. factor[at] .. " " .. currency.ladder[at - 1]
+        .. "; a coin has to be worth more than the coin below it")
+    worth[at] = worth[at - 1] * factor[at]
+end
+
+
+-- A bill spread over several rungs, as a single number of rung-`at` coins: 250 Penny is
+-- 50 Silver Coin, and 50 Silver Coin is 250 Penny again. `vector` is indexed by rung.
+--
+-- Fractional on purpose -- rounding is the caller's decision, not the ladder's. Because
+-- the fold and the recipes above use the same rates, a payout folded up covers the bill
+-- exactly: whatever rung the bill wants, breaking down from the top reaches it, so long
+-- as no rung of the bill sits ABOVE `at`. Nothing runs back up the ladder.
+local function value_at(vector, at)
+    local total = 0
+    for rung = 1, #currency.ladder do
+        total = total + (vector[rung] or 0) * worth[rung]
+    end
+    return total / worth[at]
+end
+
+
 log("[exchange] " .. #exchanges .. " conversion(s): " .. table.concat(summary, ", ") .. ".")
 
-return exchanges
+return {
+    rows = exchanges,
+    worth = worth,
+    value_at = value_at,
+}
